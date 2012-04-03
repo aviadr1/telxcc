@@ -79,7 +79,7 @@ There are some notes on my DVB-T capture and processing chains in notes folder.
 * Task are parallelized (even over multiple files processing -- eg. encoding audio from file 1.ts and video from file 2.ts)
 * MP4 output files are fully iPhone/iPad (and also Mac OS X) compatible *including* CC(!) and HTTP streaming (iOS >= 5 and (iPhone >= 4 or iPad >=2))
 
-*Soon I will launch NG version of [dedicated DVB recording box](https://fbcdn-sphotos-a.akamaihd.net/hphotos-ak-prn1/s720x720/533121_141208216005755_100003497326638_155380_1976060360_n.jpg). During testing in Prague it currently processes 80 Mbit/s of 12 TV streams and keeps and processes last 48 hours of TV broadcasting in Czech Republic. This I call time-shifting :-) Stay tuned.*
+**Soon I will also launch NG version of [dedicated DVB recording box](https://fbcdn-sphotos-a.akamaihd.net/hphotos-ak-prn1/s720x720/533121_141208216005755_100003497326638_155380_1976060360_n.jpg). During testing in Prague it currently processes 80 Mbit/s of 12 TV streams and keeps and just-in-time processes last 48 hours of TV broadcasting in Czech Republic. This I call time-shifting ;-) Stay tuned!**
 
 ## Pricing
 
