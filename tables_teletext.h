@@ -54,6 +54,7 @@ typedef enum {
 	HEBREW
 } g0_charsets_t;
 
+/*
 struct {
 	uint8_t id;
 	g0_charsets_t charset;
@@ -95,6 +96,7 @@ struct {
 	{ 0x55, HEBREW,    "Hebrew" },
 	{ 0x57, ARABIC,    "Arabic" }
 };
+*/
 
 // G0 charsets
 uint16_t G0[5][96] = {

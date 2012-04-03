@@ -8,10 +8,12 @@ telxcc is
 * multiplatform (Mac, Linux, Windows)
 * modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
-* high performing (on Macbook with Intel SSD it processes TS files at speed of 210 MiBps, with less than 30 % 1 CPU core utilization, SSD is the bottleneck)
+* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiBps, with less than 30 % 1 CPU core utilization, SSD is the bottleneck)
 * easy to use
 
 ## Build
+
+To build binary for Intel Core 2 processor architecture just type:
 
     $ make ↵
 
@@ -23,7 +25,11 @@ You can also copy any \*.ts files into the current directory and build a profile
 
     $ make profiled ↵
 
-telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Windows.
+Or you can disable all optimizations:
+
+    $ make CCFLAGS="-Wall -std=c99"
+
+telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Windows. (Generic binary files are included.)
 
 ## Command line params
 
@@ -43,7 +49,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -o OFFSET   subtitles offset in seconds (default: 0.0)
       -n          do not print UTF-8 BOM characters at the beginning of output
       -1          produce at least one (dummy) frame
-      -c          output colour information in <font/> HTML tags
+      -c          output colour information in font HTML tags
                     (colours are supported by MPC, MPC HC, VLC, KMPlayer, VSFilter, ffdshow etc.)
       -v          be verbose (default: verboseness turned off, without being quiet)
 
@@ -71,7 +77,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 There are some notes on my DVB-T capture and processing chains in notes folder.
 
 * Task are parallelized (even over multiple files processing -- eg. encoding audio from file 1.ts and video from file 2.ts)
-* MP4 output files are fully iPhone/iPad (and also Mac OS X) compatible *including* CC(!) and HTTP streaming (iOS >= 5 and (iPhone >= 4 or iPad 2))
+* MP4 output files are fully iPhone/iPad (and also Mac OS X) compatible *including* CC(!) and HTTP streaming (iOS >= 5 and (iPhone >= 4 or iPad >=2))
 
 ## Pricing
 

@@ -1,6 +1,6 @@
 CC = gcc
-CCFLAGS = -O3 -Wall -std=c99
-LDFLAGS = 
+CCFLAGS = -m64 -march=core2 -Wall -std=c99 -O3
+LDFLAGS =
 
 OBJS = telxcc.o
 EXEC = telxcc
@@ -12,7 +12,7 @@ strip : $(EXEC)
 
 .PHONY : clean
 clean :
-	-rm -f $(OBJS) $(EXEC) profile.log
+	-rm -f $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $<
@@ -27,4 +27,4 @@ profiled :
 	find . -type f -iname \*.ts -exec sh -c './telxcc < "{}" > /dev/null 2>> profile.log' \;
 	make clean
 	make CCFLAGS="$(CCFLAGS) -fprofile-use" LDFLAGS="$(LDFLAGS) -fprofile-use" $(EXEC)
-	-rm -f *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock
+	-rm -f $(OBJS) *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock
