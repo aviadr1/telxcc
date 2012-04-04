@@ -69,7 +69,7 @@ Further Documentation:
 #include <unistd.h>
 #include <inttypes.h>
 
-//STDIN must be in binary mode -- needed for Windows
+// switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
 #include <fcntl.h>
 int _CRT_fmode = _O_BINARY;
@@ -84,6 +84,9 @@ int _fmode = _O_BINARY;
 
 // size of a TS packet payload in bytes
 #define TS_PACKET_PAYLOAD_SIZE 184
+
+// size of a PES buffer
+#define PES_BUFFER_SIZE 4096
 
 typedef struct {
 	uint8_t sync : 8;
@@ -116,21 +119,26 @@ typedef struct {
 	uint8_t tainted; // 1 = text variable contains any data
 } teletext_page_t;
 
-// should telxcc be verbose?
-uint16_t config_verbose = 0;
-#define VERBOSE if (config_verbose > 0)
+// application config global variable
+struct {
+	uint16_t verbose; // should telxcc be verbose?
+	uint16_t page; // teletext page containing cc we want to filter
+	uint16_t tid; // 13-bit packet ID for teletext stream
+	double offset; // time offset in seconds
+	uint8_t colours; // output <font...></font> tags?
+	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
+	uint8_t nonempty; // produce at least one (dummy) frame
+} config = { 0, 0, 0, 0, 0, 1, 0 };
 
-// teletext page containing cc we want to filter
-uint16_t config_page = 0;
+// macro -- output only when increased verbosity was turned on
+#define VERBOSE if (config.verbose > 0)
 
-// 13-bit packet ID for teletext stream
-uint16_t config_tid = 0;
-
-// time offset in seconds
-double config_offset = 0;
-
-// output <font...></font> tags?
-uint8_t config_colours = 0;
+// application states -- flags for notices that should be printed only once
+struct {
+	uint8_t x28_not_implemented_notified;
+	uint8_t m29_not_implemented_notified;
+	uint8_t programme_info_processed;
+} states = { 0 };
 
 // SRT frames produced
 uint32_t frames_produced = 0;
@@ -173,7 +181,7 @@ void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
 }
 
 // wide char (16 bits) to utf-8 conversion
-inline void ucs2_to_utf8(unsigned char *r, uint16_t ch) {
+inline void ucs2_to_utf8(char *r, uint16_t ch) {
 	if (ch < 0x80) {
 		r[0] = ch & 0x7f;
 		r[1] = 0;
@@ -274,7 +282,7 @@ void process_page(const teletext_page_t *page_buffer) {
 			}
 
 			if (col == col_start) {
-				if ((foreground_color != 0x7) && (config_colours == 1)) {
+				if ((foreground_color != 0x7) && (config.colours == 1)) {
 					fprintf(stdout, "<font color=\"%s\">", COLOURS[foreground_color]);
 					font_tag_opened = 1;
 				}
@@ -284,7 +292,7 @@ void process_page(const teletext_page_t *page_buffer) {
 				if (v <= 0x7) {
 					// ETS 300 706, chapter 12.2: Unless operating in "Hold Mosaics" mode,
 					// each character space occupied by a spacing attribute is displayed as a SPACE.
-					if (config_colours == 1) {
+					if (config.colours == 1) {
 						if (font_tag_opened == 1) {
 							fprintf(stdout, "</font> ");
 							font_tag_opened = 0;
@@ -301,14 +309,14 @@ void process_page(const teletext_page_t *page_buffer) {
 				}
 
 				if (v >= 0x20) {
-					unsigned char u[4] = {0, 0, 0, 0};
+					char u[4] = {0, 0, 0, 0};
 					ucs2_to_utf8(u, v);
 					fprintf(stdout, "%s", u);
 				}
 			}
 		}
 
-		if ((config_colours == 1) && (font_tag_opened == 1)) {
+		if ((config.colours == 1) && (font_tag_opened == 1)) {
 			fprintf(stdout, "</font>");
 			font_tag_opened = 0;
 		}
@@ -343,9 +351,9 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		uint8_t flag_subtitle = (unham_8_4(packet->data[5]) & 0x08) >> 3;
 		cc_map[i] |= flag_subtitle << (m - 1);
 
-		if ((config_page == 0) && (flag_subtitle > 0) && (i < 0xff)) {
-			config_page = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
-			fprintf(stderr, "- No teletext page specified, first received suitable page is %03x, not guaranteed\n", config_page);
+		if ((config.page == 0) && (flag_subtitle > 0) && (i < 0xff)) {
+			config.page = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
+			fprintf(stderr, "- No teletext page specified, first received suitable page is %03x, not guaranteed\n", config.page);
 		}
 	}
 
@@ -366,7 +374,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 
 		// ETS 300 706, chapter 7.2.1: Page is terminated by and excludes the next page header packet
 		// having the same magazine address in parallel transmission mode, or any magazine address in serial transmission mode.
-		if (page_number != config_page) {
+		if (page_number != config.page) {
 			// OK, whole page was transmitted, however we need to wait for next subtitle frame;
 			// otherwise it would be displayed only for a few ms
 			receiving_data = 0;
@@ -414,7 +422,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		}
 		*/
 	}
-	else if ((y >= 1) && (y <= 23) && (m == magazine(config_page))) {
+	else if ((y >= 1) && (y <= 23) && (m == magazine(config.page))) {
 		if ((transmission_mode == TRANSMISSION_MODE_SERIAL) && (data_unit_id != DATA_UNIT_EBU_TELETEXT_SUBTITLE)) return;
 		if (receiving_data == 1) {
 			// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
@@ -426,7 +434,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			page_buffer.tainted = 1;
 		}
 	}
-	else if ((y == 26) && (m == magazine(config_page))) {
+	else if ((y == 26) && (m == magazine(config.page))) {
 		if ((transmission_mode == TRANSMISSION_MODE_SERIAL) && (data_unit_id != DATA_UNIT_EBU_TELETEXT_SUBTITLE)) return;
 		if (receiving_data == 1) {
 			// ETS 300 706, chapter 12.3.2 (X/26 definition)
@@ -477,20 +485,29 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		}
 	}
 	else if (y == 28) {
-		VERBOSE fprintf(stderr, "- Packet X/28 received; not yet implemented; you won't be able to use secondary language\n");
+		VERBOSE {
+			if (states.x28_not_implemented_notified == 0) {
+				fprintf(stderr, "- Packet X/28 received; not yet implemented; you won't be able to use secondary language etc.\n");
+				states.x28_not_implemented_notified = 1;
+			}
+		}
 	}
 	else if (y == 29) {
-		VERBOSE fprintf(stderr, "- Packet M/29 received; not yet implemented; you won't be able to use secondary language\n");
+		VERBOSE {
+			if (states.m29_not_implemented_notified == 0) {
+				fprintf(stderr, "- Packet M/29 received; not yet implemented; you won't be able to use secondary language etc.\n");
+				states.m29_not_implemented_notified = 1;
+			}
+		}
 	}
 	else if ((y == 30) && (m == 8)) {
 		// ETS 300 706, chapter 9.8: Broadcast Service Data Packets
-		static uint8_t programme_title_processed = 0;
-		if (programme_title_processed == 0) {
+		if (states.programme_info_processed == 0) {
 			// ETS 300 706, chapter 9.8.1: Packet 8/30 Format 1
 			if (unham_8_4(packet->data[0]) < 2) {
 				fprintf(stderr, "- Programme Identification Data = ");
 				for (uint8_t i = 20; i < 40; i++) {
-					unsigned char u[4] = {0, 0, 0, 0};
+					char u[4] = {0, 0, 0, 0};
 					ucs2_to_utf8(u, telx_to_ucs2(packet->data[i]));
 					fprintf(stderr, "%s", u);
 				}
@@ -521,7 +538,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 
 				VERBOSE fprintf(stderr, "- Transmission mode = %s\n", (transmission_mode == 1 ? "serial" : "parallel"));
 
-				programme_title_processed = 1;
+				states.programme_info_processed = 1;
 			}
 		}
 	}
@@ -592,7 +609,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
  	static uint32_t t0 = 0;
 	static uint8_t initialized = 0;
 	if (initialized == 0) {
-		delta = 1000 * config_offset - t;
+		delta = 1000 * config.offset - t;
 		t0 = t;
 		initialized = 1;
 	}
@@ -640,9 +657,6 @@ int main(int argc, const char *argv[]) {
 	fprintf(stderr, "Built on %s\n", __DATE__);
 	fprintf(stderr, "\n");
 
-	uint8_t config_bom = 1;
-	uint8_t config_nonempty = 0;
-
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -663,19 +677,19 @@ int main(int argc, const char *argv[]) {
 			exit(EXIT_SUCCESS);
 		}
 		else if ((strcmp(argv[i], "-p") == 0) && (argc > i + 1))
-			config_page = atoi(argv[++i]);
+			config.page = atoi(argv[++i]);
 		else if ((strcmp(argv[i], "-t") == 0) && (argc > i + 1))
-			config_tid = atoi(argv[++i]);
+			config.tid = atoi(argv[++i]);
 		else if ((strcmp(argv[i], "-o") == 0) && (argc > i + 1))
-			config_offset = atof(argv[++i]);
+			config.offset = atof(argv[++i]);
 		else if (strcmp(argv[i], "-n") == 0)
-			config_bom = 0;
+			config.bom = 0;
 		else if (strcmp(argv[i], "-1") == 0)
-			config_nonempty = 1;
+			config.nonempty = 1;
 		else if (strcmp(argv[i], "-c") == 0)
-			config_colours = 1;
+			config.colours = 1;
 		else if (strcmp(argv[i], "-v") == 0)
-			config_verbose = 1;
+			config.verbose = 1;
 		else {
 			fprintf(stderr, "- Unknown option %s\n", argv[i]);
 			exit(EXIT_FAILURE);
@@ -692,21 +706,21 @@ int main(int argc, const char *argv[]) {
 	}
 
 	// teletext page number out of range
-	if ((config_page != 0) && ((config_page < 100) || (config_page > 899))) {
+	if ((config.page != 0) && ((config.page < 100) || (config.page > 899))) {
 		fprintf(stderr, "- Teletext page number could not be lower than 100 or higher than 899\n");
 		exit(EXIT_FAILURE);
 	}
 
 	// default teletext page
-	if (config_page > 0) {
+	if (config.page > 0) {
 		// dec to BCD, magazine pages numbers are in BCD (ETSI 300 706)
-		config_page = ((config_page / 100) << 8) | (((config_page / 10) % 10) << 4) | (config_page % 10);
+		config.page = ((config.page / 100) << 8) | (((config.page / 10) % 10) << 4) | (config.page % 10);
 	}
 
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	// 0 = STDIN
+	// 0 = STDIN, the only multiplatform code I could use
 	if (isatty(0)) {
 		fprintf(stderr, "- I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected, see usage by \"telxcc -h\"\n\n");
 		exit(EXIT_FAILURE);
@@ -716,7 +730,7 @@ int main(int argc, const char *argv[]) {
 	setvbuf(stdout, (char*)NULL, _IOFBF, 0);
 
 	// print UTF-8 BOM chars
-	if (config_bom == 1) {
+	if (config.bom == 1) {
 		fprintf(stdout, "\xef\xbb\xbf");
 		fflush(stdout);
 	}
@@ -731,7 +745,6 @@ int main(int argc, const char *argv[]) {
 	uint8_t continuity_counter = 255;
 
 	// PES packet buffer
-	#define PES_BUFFER_SIZE 4096
 	uint8_t pes_buffer[PES_BUFFER_SIZE] = { 0 };
 	uint16_t pes_counter = 0;
 
@@ -781,7 +794,7 @@ int main(int argc, const char *argv[]) {
 		if (ts_payload_exists == 0) continue;
 
 		// PID filter
-		if ((config_tid > 0) && (config_tid != header.pid)) continue;
+		if ((config.tid > 0) && (config.tid != header.pid)) continue;
 
 		// uncorrectable error?
 		if (header.transport_error > 0) {
@@ -790,10 +803,10 @@ int main(int argc, const char *argv[]) {
 		}
 
 		// Choose first suitable PID if not set
-		if (config_tid == 0) {
+		if (config.tid == 0) {
 			if ((header.payload_unit_start > 0) && ((ts_buffer[4] == 0x00) && (ts_buffer[5] == 0x00) && (ts_buffer[6] == 0x01) && (ts_buffer[7] == 0xbd))) {
-				config_tid = header.pid;
-				fprintf(stderr, "- No teletext PID specified, first received suitable stream PID is %"PRIu16" (0x%x), not guaranteed\n", config_tid, config_tid);
+				config.tid = header.pid;
+				fprintf(stderr, "- No teletext PID specified, first received suitable stream PID is %"PRIu16" (0x%x), not guaranteed\n", config.tid, config.tid);
 			}
 			else continue;
 		}
@@ -844,7 +857,7 @@ int main(int argc, const char *argv[]) {
 		fprintf(stderr, "\n");
 	}
 
-	if ((frames_produced == 0) && (config_nonempty > 0)) {
+	if ((frames_produced == 0) && (config.nonempty > 0)) {
 		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:01,000\r\n(no closed captioning available)\r\n\r\n");
 		fflush(stdout);
 		frames_produced++;
