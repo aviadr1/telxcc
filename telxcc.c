@@ -15,6 +15,7 @@ Some portions/inspirations:
 Code contribution:
 	Laurent Debacker (https://github.com/debackerl)
 
+
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation; either version 2 of the License, or
@@ -29,35 +30,55 @@ You should have received a copy of the GNU General Public License
 along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
 
+
 I would like to thank:
 	David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegian TS samples and patient testing
 	Professor Francis F Steen and his team from UCLA for contribution
 	Laurent Debacker (https://github.com/debackerl) for bug fixes
 	Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
 
+
 telxcc conforms to ETSI 300 706 Presentation Level 1.5:
 	Presentation Level 1 defines the basic Teletext page, characterised by the use of spacing attributes only
 	and a limited alphanumeric and mosaics repertoire. Presentation Level 1.5 decoder responds as Level 1 but
 	the character repertoire is extended via packets X/26.
 
+
 Algorithm workflow:
-	main (processing TS)
-	process_pes_packet (processing PES)
-	process_telx_packet (processing teletext VBI stream)
-	process_page (processing teletext data)
+	telxcc binary
+	↳ main (setup)
+	↳ main (loop, processing TS)
+		↳ process_pes_packet (processing PES)
+			↳ process_telx_packet (processing teletext VBI stream)
+				↳ process_page (processing teletext data)
+	↳ main (clean up)
 
 Further Documentation:
-	ISO/IEC 13818-1 (Information technology - Generic coding of moving pictures and associated audio information: Systems):
-		http://mumudvb.braice.net/mumudrupal/sites/default/files/iso13818-1.pdf
-		http://en.wikipedia.org/wiki/MPEG_transport_stream
-		http://en.wikipedia.org/wiki/Packetized_elementary_stream
-		http://en.wikipedia.org/wiki/Elementary_stream
-
-	ETSI 300 706 (Enhanced Teletext Specification):
-		http://www.etsi.org/deliver/etsi_i_ets/300700_300799/300706/01_60/ets_300706e01p.pdf
-
-	ISO/IEC 6937:2001 (Information technology — Coded graphic character set for text communication — Latin alphabet):
-		http://webstore.iec.ch/preview/info_isoiec6937%7Bed3.0%7Den.pdf
+	ETSI TS 101 154 V1.9.1 (2009-09), Technical Specification
+		Digital Video Broadcasting (DVB); Specification for the use of Video and Audio Coding in Broadcasting Applications based on the MPEG-2 Transport Stream
+	
+	ETSI EN 300 231 V1.3.1 (2003-04), European Standard (Telecommunications series)
+		Television systems; Specification of the domestic video Programme Delivery Control system (PDC)
+	
+	ETSI EN 300 472 V1.3.1 (2003-05), European Standard (Telecommunications series)
+		Digital Video Broadcasting (DVB); Specification for conveying ITU-R System B Teletext in DVB bitstreams
+	
+	ETSI EN 301 775 V1.2.1 (2003-05), European Standard (Telecommunications series)
+		Digital Video Broadcasting (DVB); Specification for the carriage of Vertical Blanking Information (VBI) data in DVB bitstreams
+	
+	ETS 300 706 (May 1997)
+		Enhanced Teletext Specification
+	
+	ETS 300 708 (March 1997)
+		Television systems; Data transmission within Teletext
+	
+	ISO/IEC STANDARD 13818-1 Second edition (2000-12-01)
+		Information technology — Generic coding of moving pictures and associated audio information: Systems
+	
+	ISO/IEC STANDARD 6937 Third edition (2001-12-15)
+		Information technology — Coded graphic character set for text communication — Latin alphabet
+	
+	Werner Brückner -- Teletext in digital television
 */
 
 #include <stdio.h>
@@ -116,28 +137,28 @@ typedef struct {
 	uint64_t show_timestamp; // show at timestamp (in ms)
 	uint64_t hide_timestamp; // hide at timestamp (in ms)
 	uint16_t text[25][40]; // 25 lines x 40 cols (1 screen/page) of wide chars
-	uint8_t tainted; // 1 = text variable contains any data
+	uint8_t tainted : 1; // 1 = text variable contains any data
 } teletext_page_t;
 
 // application config global variable
 struct {
-	uint16_t verbose; // should telxcc be verbose?
+	uint8_t verbose : 1; // should telxcc be verbose?
 	uint16_t page; // teletext page containing cc we want to filter
 	uint16_t tid; // 13-bit packet ID for teletext stream
 	double offset; // time offset in seconds
-	uint8_t colours; // output <font...></font> tags?
-	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
-	uint8_t nonempty; // produce at least one (dummy) frame
-} config = { 0, 0, 0, 0, 0, 1, 0 };
+	uint8_t colours : 1; // output <font...></font> tags?
+	uint8_t bom : 1; // print UTF-8 BOM characters at the beginning of output
+	uint8_t nonempty : 1; // produce at least one (dummy) frame
+} config = { 0 };
 
 // macro -- output only when increased verbosity was turned on
 #define VERBOSE if (config.verbose > 0)
 
 // application states -- flags for notices that should be printed only once
 struct {
-	uint8_t x28_not_implemented_notified;
-	uint8_t m29_not_implemented_notified;
-	uint8_t programme_info_processed;
+	uint8_t x28_not_implemented_notified : 1;
+	uint8_t m29_not_implemented_notified : 1;
+	uint8_t programme_info_processed : 1;
 } states = { 0 };
 
 // SRT frames produced
@@ -657,6 +678,9 @@ int main(int argc, const char *argv[]) {
 	fprintf(stderr, "Built on %s\n", __DATE__);
 	fprintf(stderr, "\n");
 
+	// by default output UTF-8 BOM to redirect stdout only, windows does not like those chars in console
+	if (isatty(1) < 1) config.bom = 1;
+
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
@@ -668,7 +692,7 @@ int main(int argc, const char *argv[]) {
 			fprintf(stderr, "                (usually CZ=888, DE=150, SE=199, NO=777, UK=888 etc.)\n");
 			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream (default: auto)\n");
 			fprintf(stderr, "  -o OFFSET   subtitles offset in seconds (default: 0.0)\n");
-			fprintf(stderr, "  -n          do not print UTF-8 BOM characters at the beginning of output\n");
+			fprintf(stderr, "  -n          do not print UTF-8 BOM characters at the beginning of output (default: implicit when STDOUT is a terminal)\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
 			fprintf(stderr, "                (colours are supported by MPC, MPC HC, VLC, KMPlayer, VSFilter, ffdshow etc.)\n");
@@ -720,9 +744,9 @@ int main(int argc, const char *argv[]) {
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
-	// 0 = STDIN, the only multiplatform code I could use
+	// 0 = STDIN, the only multiplatform code I could use :-/
 	if (isatty(0)) {
-		fprintf(stderr, "- I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected, see usage by \"telxcc -h\"\n\n");
+		fprintf(stderr, "- I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -739,7 +763,7 @@ int main(int argc, const char *argv[]) {
 	uint32_t packet_counter = 0;
 
 	// TS packet buffer
-	uint8_t ts_buffer[TS_PACKET_SIZE];
+	uint8_t ts_buffer[TS_PACKET_SIZE] = { 0 };
 
 	// 255 means not set yet
 	uint8_t continuity_counter = 255;
