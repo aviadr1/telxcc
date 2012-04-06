@@ -2,18 +2,18 @@
 (c) 2011-2012 Petr Kutalek, Forers, s. r. o.: telxcc
 
 Some portions/inspirations:
-	(c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
-	(c) 2001-2005 by dvb.matt, ProjectX java dvb decoder
-	(c) Dave Chapman <dave@dchapman.com> 2003-2004, dvbtextsubs
-	(c) Ralph Metzler, DVB driver, vbidecode
-	(c) Jan Pantelje, submux-dvd
-	(c) Ragnar Sundblad, dvbtextsubs, VDR teletext subtitles plugin
-	(c) Scott T. Smith, dvdauthor
-	(c) 2007 Vladimir Voroshilov <voroshil@gmail.com>, mplayer
-	(c) 2001, 2002, 2003, 2004, 2007 Michael H. Schimek, libzvbi -- Error correction functions
+(c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
+(c) 2001-2005 by dvb.matt, ProjectX java dvb decoder
+(c) Dave Chapman <dave@dchapman.com> 2003-2004, dvbtextsubs
+(c) Ralph Metzler, DVB driver, vbidecode
+(c) Jan Pantelje, submux-dvd
+(c) Ragnar Sundblad, dvbtextsubs, VDR teletext subtitles plugin
+(c) Scott T. Smith, dvdauthor
+(c) 2007 Vladimir Voroshilov <voroshil@gmail.com>, mplayer
+(c) 2001, 2002, 2003, 2004, 2007 Michael H. Schimek, libzvbi -- Error correction functions
 
 Code contribution:
-	Laurent Debacker (https://github.com/debackerl)
+Laurent Debacker (https://github.com/debackerl)
 
 
 This program is free software; you can redistribute it and/or modify
@@ -32,53 +32,45 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
 
 
 I would like to thank:
-	David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegian TS samples and patient testing
-	Professor Francis F Steen and his team from UCLA for contribution
-	Laurent Debacker (https://github.com/debackerl) for bug fixes
-	Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
+David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegian TS samples and patient testing
+Professor Francis F Steen and his team from UCLA for contribution
+Laurent Debacker (https://github.com/debackerl) for bug fixes
+Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
 
 
-telxcc conforms to ETSI 300 706 Presentation Level 1.5:
-	Presentation Level 1 defines the basic Teletext page, characterised by the use of spacing attributes only
-	and a limited alphanumeric and mosaics repertoire. Presentation Level 1.5 decoder responds as Level 1 but
-	the character repertoire is extended via packets X/26.
+telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
+characterised by the use of spacing attributes only and a limited alphanumeric and mosaics repertoire.
+Presentation Level 1.5 decoder responds as Level 1 but the character repertoire is extended via packets X/26.
 
 
 Algorithm workflow:
-	telxcc binary
-	↳ main (setup)
-	↳ main (loop, processing TS)
-		↳ process_pes_packet (processing PES)
-			↳ process_telx_packet (processing teletext VBI stream)
-				↳ process_page (processing teletext data)
-	↳ main (clean up)
+telxcc binary
+↳ main (setup)
+↳ main (loop, processing TS)
+	↳ process_pes_packet (processing PES)
+		↳ process_telx_packet (processing teletext VBI stream)
+			↳ process_page (processing teletext data)
+↳ main (clean up)
 
-Further Documentation:
-	ETSI TS 101 154 V1.9.1 (2009-09), Technical Specification
-		Digital Video Broadcasting (DVB); Specification for the use of Video and Audio Coding in Broadcasting Applications based on the MPEG-2 Transport Stream
-	
-	ETSI EN 300 231 V1.3.1 (2003-04), European Standard (Telecommunications series)
-		Television systems; Specification of the domestic video Programme Delivery Control system (PDC)
-	
-	ETSI EN 300 472 V1.3.1 (2003-05), European Standard (Telecommunications series)
-		Digital Video Broadcasting (DVB); Specification for conveying ITU-R System B Teletext in DVB bitstreams
-	
-	ETSI EN 301 775 V1.2.1 (2003-05), European Standard (Telecommunications series)
-		Digital Video Broadcasting (DVB); Specification for the carriage of Vertical Blanking Information (VBI) data in DVB bitstreams
-	
-	ETS 300 706 (May 1997)
-		Enhanced Teletext Specification
-	
-	ETS 300 708 (March 1997)
-		Television systems; Data transmission within Teletext
-	
-	ISO/IEC STANDARD 13818-1 Second edition (2000-12-01)
-		Information technology — Generic coding of moving pictures and associated audio information: Systems
-	
-	ISO/IEC STANDARD 6937 Third edition (2001-12-15)
-		Information technology — Coded graphic character set for text communication — Latin alphabet
-	
-	Werner Brückner -- Teletext in digital television
+
+Further documentation:
+ETSI TS 101 154 V1.9.1 (2009-09), Technical Specification
+  Digital Video Broadcasting (DVB); Specification for the use of Video and Audio Coding in Broadcasting Applications based on the MPEG-2 Transport Stream
+ETSI EN 300 231 V1.3.1 (2003-04), European Standard (Telecommunications series)
+  Television systems; Specification of the domestic video Programme Delivery Control system (PDC)
+ETSI EN 300 472 V1.3.1 (2003-05), European Standard (Telecommunications series)
+  Digital Video Broadcasting (DVB); Specification for conveying ITU-R System B Teletext in DVB bitstreams
+ETSI EN 301 775 V1.2.1 (2003-05), European Standard (Telecommunications series)
+  Digital Video Broadcasting (DVB); Specification for the carriage of Vertical Blanking Information (VBI) data in DVB bitstreams
+ETS 300 706 (May 1997)
+  Enhanced Teletext Specification
+ETS 300 708 (March 1997)
+  Television systems; Data transmission within Teletext
+ISO/IEC STANDARD 13818-1 Second edition (2000-12-01)
+  Information technology — Generic coding of moving pictures and associated audio information: Systems
+ISO/IEC STANDARD 6937 Third edition (2001-12-15)
+  Information technology — Coded graphic character set for text communication — Latin alphabet
+Werner Brückner -- Teletext in digital television
 */
 
 #include <stdio.h>
@@ -89,6 +81,8 @@ Further Documentation:
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include "tables_hamming.h"
+#include "tables_teletext.h"
 
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
@@ -96,9 +90,6 @@ Further Documentation:
 int _CRT_fmode = _O_BINARY;
 int _fmode = _O_BINARY;
 #endif
-
-#include "tables_hamming.h"
-#include "tables_teletext.h"
 
 // size of a TS packet in bytes
 #define TS_PACKET_SIZE 188
@@ -159,6 +150,7 @@ struct {
 	uint8_t x28_not_implemented_notified : 1;
 	uint8_t m29_not_implemented_notified : 1;
 	uint8_t programme_info_processed : 1;
+	uint8_t pts_initialized : 1;
 } states = { 0 };
 
 // SRT frames produced
@@ -628,11 +620,10 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 
 	static int64_t delta = 0;
  	static uint32_t t0 = 0;
-	static uint8_t initialized = 0;
-	if (initialized == 0) {
+	if (states.pts_initialized == 0) {
 		delta = 1000 * config.offset - t;
 		t0 = t;
-		initialized = 1;
+		states.pts_initialized = 1;
 	}
 	// TODO: How the hell have I calculated this constant?!! It's correct, however I have no idea why. :-D
 	if (t < t0) delta += 95443718;
@@ -672,9 +663,9 @@ void signal_handler(int sig) {
 }
 
 int main(int argc, const char *argv[]) {
-	fprintf(stderr, "telxcc - teletext closed captioning decoder\n");
+	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
+	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Built on %s\n", __DATE__);
 	fprintf(stderr, "\n");
 
@@ -688,7 +679,7 @@ int main(int argc, const char *argv[]) {
 			fprintf(stderr, "  STDIN       transport stream\n");
 			fprintf(stderr, "  STDOUT      subtitles in SubRip SRT file format (UTF-8 encoded)\n");
 			fprintf(stderr, "  -h          this help text\n");
-			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captioning (default: auto)\n");
+			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions (default: auto)\n");
 			fprintf(stderr, "                (usually CZ=888, DE=150, SE=199, NO=777, UK=888 etc.)\n");
 			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream (default: auto)\n");
 			fprintf(stderr, "  -o OFFSET   subtitles offset in seconds (default: 0.0)\n");
@@ -774,10 +765,10 @@ int main(int argc, const char *argv[]) {
 
 	// reading input
 	while ((exit_request == 0) && (fread(&ts_buffer, 1, TS_PACKET_SIZE, stdin) == TS_PACKET_SIZE)) {
-    	// Transport Stream Header
-    	ts_packet_t header;
-    	// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)buffer;) -- struct packing
-    	// is platform dependant and not performing well.
+		// Transport Stream Header
+		// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)buffer;)
+		// -- struct packing is platform dependant and not performing well.
+		ts_packet_t header;
 		header.sync = ts_buffer[0];
 		header.transport_error = (ts_buffer[1] & 0x80) >> 7;
 		header.payload_unit_start = (ts_buffer[1] & 0x40) >> 6;
@@ -882,7 +873,7 @@ int main(int argc, const char *argv[]) {
 	}
 
 	if ((frames_produced == 0) && (config.nonempty > 0)) {
-		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:01,000\r\n(no closed captioning available)\r\n\r\n");
+		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:01,000\r\n(no closed captions available)\r\n\r\n");
 		fflush(stdout);
 		frames_produced++;
 	}

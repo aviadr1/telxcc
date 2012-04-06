@@ -1,6 +1,6 @@
 # telxcc
 
-telxcc is utility extracting teletext Closed Captions from Transport Streams (DVB) into SRT text files.
+telxcc is utility extracting teletext Closed Captions from Transport Stream files (TS) into SubRip text files (SRT).
 
 telxcc is
 
@@ -25,29 +25,33 @@ You can also copy any \*.ts files into the current directory and build a profile
 
     $ make profiled ↵
 
-Or you can disable all optimizations:
+Or you can disable all optimizations (binary target is any x86 processor):
 
     $ make CCFLAGS="-Wall -std=c99"
+
+Windows binary is build in MinGW by:
+
+    C:\devel\telxcc> mingw32-make -f Makefile.win
 
 telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Windows. (Generic binary files are included.)
 
 ## Command line params
 
     $ ./telxcc -h ↵
-    telxcc - teletext closed captioning decoder
+    telxcc - TELeteXt Closed Captions decoder
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
-    Built on Mar 25 2012
-
+    Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc
+    Built on Apr  6 2012
+    
     Usage: telxcc [-h] | [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-v]
       STDIN       transport stream
       STDOUT      subtitles in SubRip SRT file format (UTF-8 encoded)
       -h          this help text
-      -p PAGE     teletext page number carrying closed captioning (default: auto)
+      -p PAGE     teletext page number carrying closed captions (default: auto)
                     (usually CZ=888, DE=150, SE=199, NO=777, UK=888 etc.)
       -t TID      transport stream PID of teletext data sub-stream (default: auto)
       -o OFFSET   subtitles offset in seconds (default: 0.0)
-      -n          do not print UTF-8 BOM characters at the beginning of output
+      -n          do not print UTF-8 BOM characters at the beginning of output (default: implicit when STDOUT is a terminal)
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
                     (colours are supported by MPC, MPC HC, VLC, KMPlayer, VSFilter, ffdshow etc.)
@@ -56,10 +60,10 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 ## Usage example
 
     $ ./telxcc -p 777 < 2012-02-15_1900_WWW_NRK.ts > dagsrevyen.srt ↵
-    telxcc - teletext closed captioning decoder
+    telxcc - TELeteXt Closed Captions decoder
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
-    Built on Mar 25 2012
+    Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc
+    Built on Apr  6 2012
 
     - No teletext PID specified, first received suitable stream PID is 576 (0x240), not guaranteed
     - PID 0xbd PTS available
