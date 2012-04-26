@@ -716,14 +716,16 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 
+/*
 	// endianness test; maybe not needed, however I do not have any Big Endian system so I can be sure... :-/
 	{
-		const uint32_t ENDIANNESS_TEST = 0xdeadbeef;
-		if (*(const uint8_t *)&ENDIANNESS_TEST != 0xef) {
+		const uint32_t ENDIANNESS_TEST = 1;
+		if (*(const uint8_t *)&ENDIANNESS_TEST != 1) {
 			fprintf(stderr, "- This application was tested only at Little Endian systems!\n");
 			exit(EXIT_FAILURE);
 		}
 	}
+*/
 
 	// teletext page number out of range
 	if ((config.page != 0) && ((config.page < 100) || (config.page > 899))) {
