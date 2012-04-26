@@ -162,6 +162,12 @@ uint8_t cc_map[256] = { 0 };
 // global TS PCR value
 uint32_t global_timestamp = 0;
 
+// last timestamp computed
+uint64_t last_timestamp = 0;
+
+// working teletext page buffer
+teletext_page_t page_buffer = { 0 };
+
 // ETS 300 706, chapter 8.2
 inline uint8_t unham_8_4(uint8_t a) {
 	return (UNHAM_8_4[a] & 0x0f);
@@ -224,11 +230,11 @@ uint16_t telx_to_ucs2(uint8_t c) {
 	return r;
 }
 
-void process_page(const teletext_page_t *page_buffer) {
+void process_page(const teletext_page_t *page) {
 #ifdef DEBUG
 	for (uint8_t row = 1; row < 25; row++) {
 		fprintf(stdout, "DEBUG[%02u]: ", row);
-		for (uint8_t col = 0; col < 40; col++) fprintf(stdout, "%3x ", page_buffer->text[row][col]);
+		for (uint8_t col = 0; col < 40; col++) fprintf(stdout, "%3x ", page->text[row][col]);
 		fprintf(stdout, "\n");
 	}
 	fprintf(stdout, "\n");
@@ -238,7 +244,7 @@ void process_page(const teletext_page_t *page_buffer) {
 	uint8_t page_is_empty = 1;
 	for (uint8_t col = 0; col < 40; col++)
 		for (uint8_t row = 1; row < 25; row++)
-			if (page_buffer->text[row][col] == 0x0b) {
+			if (page->text[row][col] == 0x0b) {
 				page_is_empty = 0;
 				goto page_is_empty;
 			}
@@ -246,11 +252,11 @@ void process_page(const teletext_page_t *page_buffer) {
 	if (page_is_empty == 1) return;
 
 	char timecode_show[24] = { 0 };
-	timestamp_to_srttime(page_buffer->show_timestamp, timecode_show);
+	timestamp_to_srttime(page->show_timestamp, timecode_show);
 	timecode_show[12] = 0;
 
 	char timecode_hide[24] = { 0 };
-	timestamp_to_srttime(page_buffer->hide_timestamp, timecode_hide);
+	timestamp_to_srttime(page->hide_timestamp, timecode_hide);
 	timecode_hide[12] = 0;
 
 	// print SRT frame
@@ -263,7 +269,7 @@ void process_page(const teletext_page_t *page_buffer) {
 		uint8_t col_stop = 40;
 
 		for (int8_t col = 39; col >= 0; col--)
-			if (page_buffer->text[row][col] == 0xb) {
+			if (page->text[row][col] == 0xb) {
 				col_start = col;
 				break;
 			}
@@ -271,11 +277,11 @@ void process_page(const teletext_page_t *page_buffer) {
 		if (col_start > 39) continue;
 
 		for (uint8_t col = col_start + 1; col <= 39; col++) {
-			if (page_buffer->text[row][col] > 0x20) {
+			if (page->text[row][col] > 0x20) {
 				if (col_stop > 39) col_start = col;
 				col_stop = col;
 			}
-			if (page_buffer->text[row][col] == 0xa) break;
+			if (page->text[row][col] == 0xa) break;
 		}
 		// line is empty
 		if (col_stop > 39) continue;
@@ -288,7 +294,8 @@ void process_page(const teletext_page_t *page_buffer) {
 		uint8_t font_tag_opened = 0;
 
 		for (uint8_t col = 0; col <= col_stop; col++) {
-			uint16_t v = page_buffer->text[row][col];
+			// v is just a shortcut
+			uint16_t v = page->text[row][col];
 
 			if (col < col_start) {
 				if (v <= 0x7) foreground_color = v;
@@ -352,10 +359,8 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 	if (m == 0) m = 8;
 	uint8_t y = (address >> 3) & 0x1f;
 
-	static teletext_page_t page_buffer;
 	static uint8_t receiving_data = 0;
 	static uint8_t current_charset = 0;
-
 	static transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 
  	if (y == 0) {
@@ -628,7 +633,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	// TODO: How the hell have I calculated this constant?!! It's correct, however I have no idea why. :-D
 	if (t < t0) delta += 95443718;
 	t0 = t;
-	uint64_t timestamp = t + delta;
+	last_timestamp = t + delta;
 
 	// skip optional PES header and process each 46-byte teletext packet
 	uint16_t i = 7;
@@ -644,7 +649,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 				for (uint8_t j = 0; j < data_unit_len; j++) buffer[i + j] = REVERSE_8[buffer[i + j]];
 
 				// FIXME: This explicit type conversion could be a problem some day -- do not need to be platform independant
-				process_telx_packet(data_unit_id, (teletext_packet_payload_t *)&buffer[i], timestamp);
+				process_telx_packet(data_unit_id, (teletext_packet_payload_t *)&buffer[i], last_timestamp);
 			}
 		}
 
@@ -665,7 +670,7 @@ void signal_handler(int sig) {
 int main(int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc\n");
+	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Built on %s\n", __DATE__);
 	fprintf(stderr, "\n");
 
@@ -858,6 +863,13 @@ int main(int argc, const char *argv[]) {
 			packet_counter++;
 		}
 		else VERBOSE fprintf(stderr, "- PES packet size exceeds pes_buffer size, probably not teletext stream\n");
+	}
+
+	// output any pending close caption
+	if (page_buffer.tainted > 0) {
+		// this time we do not subtract any frames, there will be no more frames
+		page_buffer.hide_timestamp = last_timestamp;
+		process_page(&page_buffer);
 	}
 
 	VERBOSE {
