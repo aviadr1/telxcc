@@ -84,11 +84,19 @@ Werner Brückner -- Teletext in digital television
 #include "tables_hamming.h"
 #include "tables_teletext.h"
 
+#define VERSION "2.1.0"
+
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
 #include <fcntl.h>
 int _CRT_fmode = _O_BINARY;
 int _fmode = _O_BINARY;
+#endif
+
+// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
+#ifdef __MINGW32__
+#define _WIN32_WINNT 0x0502
+#include <windows.h>
 #endif
 
 // size of a TS packet in bytes
@@ -671,10 +679,10 @@ int main(int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
 	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
-	fprintf(stderr, "Built on %s\n", __DATE__);
+	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
-	// by default output UTF-8 BOM to redirect stdout only, windows does not like those chars in console
+	// by default output UTF-8 BOM to redirect stdout only, Windows does not like those chars in console
 	if (isatty(1) < 1) config.bom = 1;
 
 	// command line params parsing
@@ -715,6 +723,17 @@ int main(int argc, const char *argv[]) {
 			exit(EXIT_FAILURE);
 		}
 	}
+
+// for better UX in Windows we want to detect that the app is not run by "double-clicking" in Windows Explorer GUI
+// raise a dialog box if the application is invoked by "double-click"
+#ifdef __MINGW32__
+	HWND consoleWnd = GetConsoleWindow();
+	DWORD dwProcessId = 0;
+	GetWindowThreadProcessId(consoleWnd, &dwProcessId);
+	if ((GetCurrentProcessId() == dwProcessId) && (argc == 1)) {
+		MessageBox(NULL, "telxcc is a console application, please run it from cmd.exe", "telxcc", MB_OK | MB_ICONWARNING);
+	}
+#endif
 
 /*
 	// endianness test; maybe not needed, however I do not have any Big Endian system so I can be sure... :-/
