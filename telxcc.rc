@@ -6,11 +6,11 @@ FILEFLAGS 0x0L
 FILEOS 0x4L
 FILETYPE 0x1L
 FILESUBTYPE 0x0L
-BEGIN
+{
 	BLOCK "StringFileInfo"
-	BEGIN
+	{
 		BLOCK "040904B0"
-		BEGIN
+		{
 			VALUE "ProductVersion", "2.1.0"
 			VALUE "FileVersion", "2.1.0"
 			VALUE "InternalName", "telxcc"
@@ -20,11 +20,12 @@ BEGIN
 			VALUE "CompanyName", "Forers, s. r. o."
 			VALUE "LegalCopyright", "(c) Petr Kutalek, 2011-2012"
 			VALUE "Comments", "Licensed under the GPL. https://github.com/forers/telxcc"
-		END
-	END
+		}
+	}
 
 	BLOCK "VarFileInfo"
-	BEGIN
+	{
 		VALUE "Translation", 0x409, 1252
-	END
-END
+	}
+}
+2 RT_MANIFEST "telxcc.exe.manifest"
