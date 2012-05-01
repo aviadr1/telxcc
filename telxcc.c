@@ -176,6 +176,9 @@ uint64_t last_timestamp = 0;
 // working teletext page buffer
 teletext_page_t page_buffer = { 0 };
 
+// teletext transmission mode
+transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
+
 // ETS 300 706, chapter 8.2
 inline uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
@@ -245,7 +248,7 @@ uint16_t telx_to_ucs2(uint8_t c) {
 	return r;
 }
 
-void process_page(const teletext_page_t *page) {
+void process_page(teletext_page_t *page) {
 #ifdef DEBUG
 	for (uint8_t row = 1; row < 25; row++) {
 		fprintf(stdout, "DEBUG[%02u]: ", row);
@@ -265,6 +268,8 @@ void process_page(const teletext_page_t *page) {
 			}
 	page_is_empty:
 	if (page_is_empty == 1) return;
+
+	if (page->show_timestamp > page->hide_timestamp) page->hide_timestamp = page->show_timestamp;
 
 	char timecode_show[24] = { 0 };
 	timestamp_to_srttime(page->show_timestamp, timecode_show);
@@ -367,7 +372,7 @@ inline uint8_t magazine(uint16_t page) {
 	return ((page >> 8) & 0xf);
 }
 
-void process_telx_packet(teletext_packet_payload_t *packet, uint64_t timestamp) {
+void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp) {
 	// variable names conform to ETS 300 706, chapter 7.1.2
 	uint8_t address = (unham_8_4(packet->address[1]) << 4) | unham_8_4(packet->address[0]);
 	uint8_t m = address & 0x7;
@@ -376,7 +381,6 @@ void process_telx_packet(teletext_packet_payload_t *packet, uint64_t timestamp) 
 
 	static uint8_t receiving_data = 0;
 	static uint8_t current_charset = 0;
-	static transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 
 	if (y == 0) {
 		// CC map
@@ -388,7 +392,10 @@ void process_telx_packet(teletext_packet_payload_t *packet, uint64_t timestamp) 
 			config.page = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 			fprintf(stderr, "- No teletext page specified, first received suitable page is %03x, not guaranteed\n", config.page);
 		}
-
+	}
+	
+	// Well, this not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
+	if ((y == 0) && (data_unit_id == DATA_UNIT_EBU_TELETEXT_SUBTITLE)) {
 	 	// Page number and control bits
 		uint16_t page_number = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 		uint8_t charset = ((unham_8_4(packet->data[7]) & 0x08) | (unham_8_4(packet->data[7]) & 0x04) | (unham_8_4(packet->data[7]) & 0x02)) >> 1;
@@ -663,7 +670,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 				for (uint8_t j = 0; j < data_unit_len; j++) buffer[i + j] = REVERSE_8[buffer[i + j]];
 
 				// FIXME: This explicit type conversion could be a problem some day -- do not need to be platform independant
-				process_telx_packet((teletext_packet_payload_t *)&buffer[i], last_timestamp);
+				process_telx_packet(data_unit_id, (teletext_packet_payload_t *)&buffer[i], last_timestamp);
 			}
 		}
 
