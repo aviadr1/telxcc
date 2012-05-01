@@ -151,7 +151,7 @@ struct {
 } config = { 0 };
 
 // macro -- output only when increased verbosity was turned on
-#define VERBOSE if (config.verbose > 0)
+#define VERBOSE_ONLY if (config.verbose > 0)
 
 // application states -- flags for notices that should be printed only once
 struct {
@@ -179,11 +179,17 @@ teletext_page_t page_buffer = { 0 };
 // teletext transmission mode
 transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 
+// extracts magazine No from teletext page
+#define MAGAZINE(p) ((p >> 8) & 0xf)
+
+// extracts  page No from teletext page
+#define PAGE(p) (p & 0xff)
+
 // ETS 300 706, chapter 8.2
 inline uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
-		VERBOSE fprintf(stderr, "- Unrecoverable data error; UNHAM8/4(%02x)\n", a);
+		VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; UNHAM8/4(%02x)\n", a);
 	}
 	return (r & 0x0f);
 }
@@ -239,7 +245,7 @@ inline void ucs2_to_utf8(char *r, uint16_t ch) {
 // check parity and translate any reasonable teletext character into ucs2
 uint16_t telx_to_ucs2(uint8_t c) {
 	if (PARITY_8[c] == 0) {
-		VERBOSE fprintf(stderr, "- Unrecoverable data error; PARITY(%02x)\n", c);
+		VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; PARITY(%02x)\n", c);
 		return 0x20;
 	}
 
@@ -368,10 +374,6 @@ void process_page(teletext_page_t *page) {
 	fflush(stdout);
 }
 
-inline uint8_t magazine(uint16_t page) {
-	return ((page >> 8) & 0xf);
-}
-
 void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp) {
 	// variable names conform to ETS 300 706, chapter 7.1.2
 	uint8_t address = (unham_8_4(packet->address[1]) << 4) | unham_8_4(packet->address[0]);
@@ -392,14 +394,11 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			config.page = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 			fprintf(stderr, "- No teletext page specified, first received suitable page is %03x, not guaranteed\n", config.page);
 		}
-	}
-	
-	// Well, this not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
-	if ((y == 0) && (data_unit_id == DATA_UNIT_EBU_TELETEXT_SUBTITLE)) {
+
 	 	// Page number and control bits
 		uint16_t page_number = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 		uint8_t charset = ((unham_8_4(packet->data[7]) & 0x08) | (unham_8_4(packet->data[7]) & 0x04) | (unham_8_4(packet->data[7]) & 0x02)) >> 1;
-		//uint8_t flag_suppress_header = unham_8_4(packet->data[6]) & 0x01;
+		uint8_t flag_suppress_header = unham_8_4(packet->data[6]) & 0x01;
 		//uint8_t flag_inhibit_display = (unham_8_4(packet->data[6]) & 0x08) >> 3;
 
 		// ETS 300 706, chapter 9.3.1.3:
@@ -411,12 +410,15 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		// ETS 300 706, chapter 7.2.1: Page is terminated by and excludes the next page header packet
 		// having the same magazine address in parallel transmission mode, or any magazine address in serial transmission mode.
 		transmission_mode = unham_8_4(packet->data[7]) & 0x01;
-		if (
-			// serial mode page transmission termination
-			((transmission_mode == TRANSMISSION_MODE_SERIAL) && ((page_number & 0xff) != (config.page & 0xff))) ||
+
+		// Well, this not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
+		if ((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (data_unit_id != DATA_UNIT_EBU_TELETEXT_SUBTITLE)) return;
+
+		if (// serial mode page transmission termination
+			((transmission_mode == TRANSMISSION_MODE_SERIAL) && (PAGE(page_number) != PAGE(config.page))) ||
 			// parallel mode page transmission termination
-			((transmission_mode == TRANSMISSION_MODE_PARALLEL) && ((page_number & 0xff) != (config.page & 0xff)) && (m == magazine(config.page)))
-		) {
+			((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (PAGE(page_number) != PAGE(config.page)) && (m == MAGAZINE(config.page)))
+			) {
 			// OK, whole page was transmitted, however we need to wait for next subtitle frame;
 			// otherwise it would be displayed only for a few ms
 			receiving_data = 0;
@@ -453,18 +455,14 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			G0[LATIN][0x7d - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][11];
 			G0[LATIN][0x7e - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][12];
 			current_charset = charset;
-			VERBOSE fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x\n", current_charset);
+			VERBOSE_ONLY fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x\n", current_charset);
 		}
 
-		/*
 		// I know -- not needed; in subtitles we will never need disturbing teletext page status bar
 		// displaying tv station name, current time etc.
-		if (flag_suppress_header == 0) {
-			for (uint8_t i = 14; i < 40; i++) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
-		}
-		*/
+		if (flag_suppress_header == 0) for (uint8_t i = 14; i < 40; i++) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
 	}
-	else if ((y >= 1) && (y <= 23) && (m == magazine(config.page)) && (receiving_data == 1)) {
+	else if ((y >= 1) && (y <= 23) && (m == MAGAZINE(config.page)) && (receiving_data == 1)) {
 		// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
 		// a character location and overwriting the existing character defined on the Level 1 page
 		// ETS 300 706, annex B.2.2: Packets with Y = 26 shall be transmitted before any packets with Y = 1 to Y = 25;
@@ -473,19 +471,18 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		for (uint8_t i = 0; i < 40; i++) if (page_buffer.text[y][i] == 0x00) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
 		page_buffer.tainted = 1;
 	}
-	else if ((y == 26) && (m == magazine(config.page)) && (receiving_data == 1)) {
+	else if ((y == 26) && (m == MAGAZINE(config.page)) && (receiving_data == 1)) {
 		// ETS 300 706, chapter 12.3.2 (X/26 definition)
 		uint8_t x26_row = 0;
 		uint8_t x26_col = 0;
 
 		uint32_t decoded[13] = { 0 };
-		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++)
-			decoded[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) decoded[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
 
 		for (uint8_t j = 0; j < 13; j++) {
 			// invalid data (HAM24/18 uncorrectable error detected), skip group
 			if ((decoded[j] & 0x80000000) > 0) {
-				VERBOSE fprintf(stderr, "- Unrecoverable data error; UNHAM24/18=%04x\n", decoded[j]);
+				VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; UNHAM24/18()=%04x\n", decoded[j]);
 				continue;
 			}
 
@@ -524,7 +521,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		}
 	}
 	else if (y == 28) {
-		VERBOSE {
+		VERBOSE_ONLY {
 			if (states.x28_not_implemented_notified == 0) {
 				fprintf(stderr, "- Packet X/28 received; not yet implemented; you won't be able to use secondary language etc.\n");
 				states.x28_not_implemented_notified = 1;
@@ -532,7 +529,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		}
 	}
 	else if (y == 29) {
-		VERBOSE {
+		VERBOSE_ONLY {
 			if (states.m29_not_implemented_notified == 0) {
 				fprintf(stderr, "- Packet M/29 received; not yet implemented; you won't be able to use secondary language etc.\n");
 				states.m29_not_implemented_notified = 1;
@@ -575,7 +572,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 				// ctime output itself is \n-ended
 				fprintf(stderr, "- Universal Time Co-ordinated = %s", ctime(&t0));
 
-				VERBOSE fprintf(stderr, "- Transmission mode = %s\n", (transmission_mode == 1 ? "serial" : "parallel"));
+				VERBOSE_ONLY fprintf(stderr, "- Transmission mode = %s\n", (transmission_mode == 1 ? "serial" : "parallel"));
 
 				states.programme_info_processed = 1;
 			}
@@ -619,10 +616,10 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	if (using_pts == 255) {
 		if ((optional_pes_header_included == 1) && ((buffer[7] & 0x80) > 0)) {
 			using_pts = 1;
-			VERBOSE fprintf(stderr, "- PID 0xbd PTS available\n");
+			VERBOSE_ONLY fprintf(stderr, "- PID 0xbd PTS available\n");
 		} else {
 			using_pts = 0;
-			VERBOSE fprintf(stderr, "- PID 0xbd PTS unavailable, using TS PCR\n");
+			VERBOSE_ONLY fprintf(stderr, "- PID 0xbd PTS unavailable, using TS PCR\n");
 		}
 	}
 
@@ -808,7 +805,7 @@ int main(int argc, const char *argv[]) {
 		// Transport Stream Header
 		// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)buffer;)
 		// -- struct packing is platform dependant and not performing well.
-		ts_packet_t header;
+		ts_packet_t header = { 0 };
 		header.sync = ts_buffer[0];
 		header.transport_error = (ts_buffer[1] & 0x80) >> 7;
 		header.payload_unit_start = (ts_buffer[1] & 0x40) >> 6;
@@ -853,7 +850,7 @@ int main(int argc, const char *argv[]) {
 
 		// uncorrectable error?
 		if (header.transport_error > 0) {
-			VERBOSE fprintf(stderr, "- Uncorrectable TS packet error (received CC %1x)\n", header.continuity_counter);
+			VERBOSE_ONLY fprintf(stderr, "- Uncorrectable TS packet error (received CC %1x)\n", header.continuity_counter);
 			continue;
 		}
 
@@ -874,7 +871,7 @@ int main(int argc, const char *argv[]) {
 			if (af_discontinuity == 0) {
 				continuity_counter = (continuity_counter + 1) % 16;
 				if (header.continuity_counter != continuity_counter) {
-					VERBOSE fprintf(stderr, "- Missing TS packet, flushing pes_buffer (expected CC %1x, received CC %1x, TS discontinuity %s, TS priority %s)\n",
+					VERBOSE_ONLY fprintf(stderr, "- Missing TS packet, flushing pes_buffer (expected CC %1x, received CC %1x, TS discontinuity %s, TS priority %s)\n",
 						continuity_counter, header.continuity_counter, (af_discontinuity ? "YES" : "NO"), (header.transport_priority ? "YES" : "NO"));
 					pes_counter = 0;
 					continuity_counter = 255;
@@ -897,7 +894,7 @@ int main(int argc, const char *argv[]) {
 			pes_counter += TS_PACKET_PAYLOAD_SIZE;
 			packet_counter++;
 		}
-		else VERBOSE fprintf(stderr, "- PES packet size exceeds pes_buffer size, probably not teletext stream\n");
+		else VERBOSE_ONLY fprintf(stderr, "- PES packet size exceeds pes_buffer size, probably not teletext stream\n");
 	}
 
 	// output any pending close caption
@@ -907,7 +904,7 @@ int main(int argc, const char *argv[]) {
 		process_page(&page_buffer);
 	}
 
-	VERBOSE {
+	VERBOSE_ONLY {
 		if (frames_produced == 0) fprintf(stderr, "- No frames produced. CC teletext page number was probably wrong.\n");
 		fprintf(stderr, "- There were some CC data carried via pages: ");
 		// We ignore i = 0xff, because 0xffs are teletext ending frames
