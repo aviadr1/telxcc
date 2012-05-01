@@ -40,8 +40,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc
-    Built on Apr  6 2012
+    Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
+    Version 2.1.1 (Built on May  1 2012)
     
     Usage: telxcc [-h] | [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-v]
       STDIN       transport stream
@@ -51,7 +51,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
                     (usually CZ=888, DE=150, SE=199, NO=777, UK=888 etc.)
       -t TID      transport stream PID of teletext data sub-stream (default: auto)
       -o OFFSET   subtitles offset in seconds (default: 0.0)
-      -n          do not print UTF-8 BOM characters at the beginning of output (default: implicit when STDOUT is a terminal)
+      -n          do not print UTF-8 BOM characters at the beginning of output
+                    (default: implicit when STDOUT is a terminal)
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
                     (colours are supported by MPC, MPC HC, VLC, KMPlayer, VSFilter, ffdshow etc.)
@@ -62,8 +63,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     $ ./telxcc -p 777 < 2012-02-15_1900_WWW_NRK.ts > dagsrevyen.srt ↵
     telxcc - TELeteXt Closed Captions decoder
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software http://fore.rs/donate/telxcc
-    Built on Apr  6 2012
+    Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
+    Version 2.1.1 (Built on May  1 2012)
 
     - No teletext PID specified, first received suitable stream PID is 576 (0x240), not guaranteed
     - PID 0xbd PTS available
