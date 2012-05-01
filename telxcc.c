@@ -197,7 +197,7 @@ uint8_t current_charset = 0;
 #define PAGE(p) (p & 0xff)
 
 // ETS 300 706, chapter 8.2
-inline uint8_t unham_8_4(uint8_t a) {
+uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
 		VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; UNHAM8/4(%02x)\n", a);
@@ -206,7 +206,7 @@ inline uint8_t unham_8_4(uint8_t a) {
 }
 
 // ETS 300 706, chapter 8.3
-inline uint32_t unham_24_18(uint32_t a) {
+uint32_t unham_24_18(uint32_t a) {
 	uint8_t B0 = a & 0xff;
 	uint8_t B1 = (a >> 8) & 0xff;
 	uint8_t B2 = (a >> 16) & 0xff;
@@ -407,7 +407,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		uint16_t page_number = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 		uint8_t charset = ((unham_8_4(packet->data[7]) & 0x08) | (unham_8_4(packet->data[7]) & 0x04) | (unham_8_4(packet->data[7]) & 0x02)) >> 1;
 		uint8_t flag_suppress_header = unham_8_4(packet->data[6]) & 0x01;
-		uint8_t flag_inhibit_display = (unham_8_4(packet->data[6]) & 0x08) >> 3;
+		//uint8_t flag_inhibit_display = (unham_8_4(packet->data[6]) & 0x08) >> 3;
 
 		// ETS 300 706, chapter 9.3.1.3:
 		// When set to '1' the service is designated to be in Serial mode and the transmission of a page is terminated
@@ -419,19 +419,17 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		// having the same magazine address in parallel transmission mode, or any magazine address in serial transmission mode.
 		transmission_mode = unham_8_4(packet->data[7]) & 0x01;
 
-		// Well, this not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
+		// Well, this is not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
 		if ((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (data_unit_id != DATA_UNIT_EBU_TELETEXT_SUBTITLE)) return;
-
-		if (// serial mode page transmission termination
-			((transmission_mode == TRANSMISSION_MODE_SERIAL) && (PAGE(page_number) != PAGE(config.page))) ||
-			// parallel mode page transmission termination
-			((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (PAGE(page_number) != PAGE(config.page)) && (m == MAGAZINE(config.page)))
+		if ( ((transmission_mode == TRANSMISSION_MODE_SERIAL) && (PAGE(page_number) != PAGE(config.page))) || 
+		     ((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (PAGE(page_number) != PAGE(config.page)) && (m == MAGAZINE(config.page)))
 			) {
 			// OK, whole page was transmitted, however we need to wait for next subtitle frame;
 			// otherwise it would be displayed only for a few ms
 			receiving_data = NO;
 			return;
 		}
+		if (page_number != config.page) return;
 
 		// Now we have the begining of page transmittion; if there is page_buffer pending, process it
 		if (page_buffer.tainted == YES) {
