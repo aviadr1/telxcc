@@ -457,7 +457,7 @@ void process_telx_packet(teletext_packet_payload_t *packet, uint64_t timestamp) 
 		}
 		*/
 	}
-	else if ((y >= 1) && (y <= 23) && (m == magazine(config.page)) && (receiving_data == 1)) {
+	else if ((y >= 1) && (y <= 23) && (m == magazine(config.page)) && (receiving_data == 1)) {
 		// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
 		// a character location and overwriting the existing character defined on the Level 1 page
 		// ETS 300 706, annex B.2.2: Packets with Y = 26 shall be transmitted before any packets with Y = 1 to Y = 25;
