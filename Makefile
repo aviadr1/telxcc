@@ -15,7 +15,7 @@ clean :
 	-rm -f $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+	$(CC) -o $@ $(OBJS) $(LDFLAGS) 
 
 %.o : %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<

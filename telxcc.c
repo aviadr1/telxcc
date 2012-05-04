@@ -84,7 +84,7 @@ Werner Brückner -- Teletext in digital television
 #include "tables_hamming.h"
 #include "tables_teletext.h"
 
-#define VERSION "2.1.1"
+#define VERSION "2.1.2"
 
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
@@ -97,9 +97,10 @@ int _fmode = _O_BINARY;
 #ifdef __MINGW32__
 #define _WIN32_WINNT 0x0502
 #include <windows.h>
+#define _WIN32_IE 0x0400
+#include <commctrl.h>
 #endif
 
-// BOOL values (Obj-C like)
 #define YES 1
 #define NO 0
 #define UNDEF 255
@@ -169,7 +170,7 @@ struct {
 // SRT frames produced
 uint32_t frames_produced = 0;
 
-// subtitle type pages bitmap
+// subtitle type pages bitmap, 2048 bits = 2048 possible pages in teletext (excl. subpages)
 uint8_t cc_map[256] = { 0 };
 
 // global TS PCR value
@@ -193,7 +194,7 @@ uint8_t current_charset = 0;
 // extracts magazine No from teletext page
 #define MAGAZINE(p) ((p >> 8) & 0xf)
 
-// extracts  page No from teletext page
+// extracts page No from teletext page
 #define PAGE(p) (p & 0xff)
 
 // ETS 300 706, chapter 8.2
@@ -232,7 +233,7 @@ void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
 }
 
 // wide char (16 bits) to utf-8 conversion
-inline void ucs2_to_utf8(char *r, uint16_t ch) {
+void ucs2_to_utf8(char *r, uint16_t ch) {
 	if (ch < 0x80) {
 		r[0] = ch & 0x7f;
 		r[1] = 0;
@@ -275,7 +276,7 @@ void process_page(teletext_page_t *page) {
 	fprintf(stdout, "\n");
 #endif
 
-	// optimalization: slicing column by column -- higher probability we could find boxed area start mark sooner
+	// optimization: slicing column by column -- higher probability we could find boxed area start mark sooner
 	uint8_t page_is_empty = YES;
 	for (uint8_t col = 0; col < 40; col++)
 		for (uint8_t row = 1; row < 25; row++)
@@ -419,19 +420,21 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		// having the same magazine address in parallel transmission mode, or any magazine address in serial transmission mode.
 		transmission_mode = unham_8_4(packet->data[7]) & 0x01;
 
-		// Well, this is not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
+		// FIXME: Well, this is not ETS 300 706 kosher, however we are interested in DATA_UNIT_EBU_TELETEXT_SUBTITLE only
 		if ((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (data_unit_id != DATA_UNIT_EBU_TELETEXT_SUBTITLE)) return;
-		if ( ((transmission_mode == TRANSMISSION_MODE_SERIAL) && (PAGE(page_number) != PAGE(config.page))) || 
-		     ((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (PAGE(page_number) != PAGE(config.page)) && (m == MAGAZINE(config.page)))
-			) {
-			// OK, whole page was transmitted, however we need to wait for next subtitle frame;
-			// otherwise it would be displayed only for a few ms
+
+		if ((receiving_data == YES) && (
+				((transmission_mode == TRANSMISSION_MODE_SERIAL) && (PAGE(page_number) != PAGE(config.page))) ||
+				((transmission_mode == TRANSMISSION_MODE_PARALLEL) && (PAGE(page_number) != PAGE(config.page)) && (m == MAGAZINE(config.page)))
+			)) {
 			receiving_data = NO;
 			return;
 		}
+
+		// Page transmission is terminated, however now we are waiting for our new page
 		if (page_number != config.page) return;
 
-		// Now we have the begining of page transmittion; if there is page_buffer pending, process it
+		// Now we have the begining of page transmission; if there is page_buffer pending, process it
 		if (page_buffer.tainted == YES) {
 			// it would be nice, if subtitle hides on previous video frame, so we contract 40 ms (1 frame @25 fps)
 			page_buffer.hide_timestamp = timestamp - 40;
@@ -466,7 +469,10 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 
 		// I know -- not needed; in subtitles we will never need disturbing teletext page status bar
 		// displaying tv station name, current time etc.
-		if (flag_suppress_header == NO) for (uint8_t i = 14; i < 40; i++) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
+		if (flag_suppress_header == NO) {
+			for (uint8_t i = 14; i < 40; i++) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
+			//page_buffer.tainted = YES;
+		}
 	}
 	else if ((y >= 1) && (y <= 23) && (m == MAGAZINE(config.page)) && (receiving_data == YES)) {
 		// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
@@ -584,7 +590,6 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			}
 		}
 	}
-	// else nothing; we do not process page related extension packets as in ETS 300 706, chapter 7.2.3
 }
 
 void process_pes_packet(uint8_t *buffer, uint16_t size) {
@@ -694,7 +699,7 @@ void signal_handler(int sig) {
 int main(int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
+	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\nhttp://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
@@ -704,20 +709,17 @@ int main(int argc, const char *argv[]) {
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
-			fprintf(stderr, "Usage: telxcc [-h] | [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-v]\n");
+			fprintf(stderr, "Usage: telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c]\n");
 			fprintf(stderr, "  STDIN       transport stream\n");
 			fprintf(stderr, "  STDOUT      subtitles in SubRip SRT file format (UTF-8 encoded)\n");
 			fprintf(stderr, "  -h          this help text\n");
-			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions (default: auto)\n");
-			fprintf(stderr, "                (usually CZ=888, DE=150, SE=199, NO=777, UK=888 etc.)\n");
-			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream (default: auto)\n");
-			fprintf(stderr, "  -o OFFSET   subtitles offset in seconds (default: 0.0)\n");
-			fprintf(stderr, "  -n          do not print UTF-8 BOM characters at the beginning of output\n");
-			fprintf(stderr, "                (default: implicit when STDOUT is a terminal)\n");
+			fprintf(stderr, "  -v          be verbose\n");
+			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions\n");
+			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream\n");
+			fprintf(stderr, "  -o OFFSET   subtitles offset in seconds\n");
+			fprintf(stderr, "  -n          do not print UTF-8 BOM characters to the file\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
-			fprintf(stderr, "                (colours are supported by MPC, MPC HC, VLC, KMPlayer, VSFilter, ffdshow etc.)\n");
-			fprintf(stderr, "  -v          be verbose (default: verboseness turned off, without being quiet)\n");
 			fprintf(stderr, "\n");
 			exit(EXIT_SUCCESS);
 		}
@@ -744,6 +746,11 @@ int main(int argc, const char *argv[]) {
 // for better UX in Windows we want to detect that the app is not run by "double-clicking" in Windows Explorer GUI
 // raise a dialog box if the application is invoked by "double-click"
 #ifdef __MINGW32__
+	INITCOMMONCONTROLSEX iccx;
+	iccx.dwSize = sizeof(INITCOMMONCONTROLSEX);
+	iccx.dwICC = ICC_COOL_CLASSES | ICC_BAR_CLASSES;
+	InitCommonControlsEx(&iccx);
+
 	HWND consoleWnd = GetConsoleWindow();
 	DWORD dwProcessId = 0;
 	GetWindowThreadProcessId(consoleWnd, &dwProcessId);

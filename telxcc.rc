@@ -1,7 +1,7 @@
-1 RT_MANIFEST "telxcc.exe.manifest"
+1 24 "telxcc.exe.manifest"
 1 VERSIONINFO
-FILEVERSION 2,1,1,0
-PRODUCTVERSION 2,1,1,0
+FILEVERSION 2,1,2,0
+PRODUCTVERSION 2,1,2,0
 FILEFLAGSMASK 0x3FL
 FILEFLAGS 0x0L
 FILEOS 0x4L
@@ -12,8 +12,8 @@ FILESUBTYPE 0x0L
 	{
 		BLOCK "040904B0"
 		{
-			VALUE "ProductVersion", "2.1.1"
-			VALUE "FileVersion", "2.1.1"
+			VALUE "ProductVersion", "2.1.2"
+			VALUE "FileVersion", "2.1.2"
 			VALUE "InternalName", "telxcc"
 			VALUE "ProductName", "telxcc"
 			VALUE "OriginalFilename", "telxcc.exe"
