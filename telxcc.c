@@ -84,7 +84,7 @@ Werner Brückner -- Teletext in digital television
 #include "tables_hamming.h"
 #include "tables_teletext.h"
 
-#define VERSION "2.1.2"
+#define VERSION "2.1.3"
 
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
@@ -95,15 +95,18 @@ int _fmode = _O_BINARY;
 
 // for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
 #ifdef __MINGW32__
+#define WIN32_LEAN_AND_MEAN
 #define _WIN32_WINNT 0x0502
-#include <windows.h>
 #define _WIN32_IE 0x0400
+#include <windows.h>
 #include <commctrl.h>
 #endif
 
-#define YES 1
-#define NO 0
-#define UNDEF 255
+typedef enum {
+	YES = 1,
+	NO = 0,
+	UNDEF = 255
+} bool_t;
 
 // size of a TS packet in bytes
 #define TS_PACKET_SIZE 188
@@ -699,7 +702,8 @@ void signal_handler(int sig) {
 int main(int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\nhttp://fore.rs/donate/telxcc\n");
+	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
+	fprintf(stderr, "http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
@@ -745,17 +749,21 @@ int main(int argc, const char *argv[]) {
 
 // for better UX in Windows we want to detect that the app is not run by "double-clicking" in Windows Explorer GUI
 // raise a dialog box if the application is invoked by "double-click"
+// if argc > 1 do not display warning, because telxcc could be run within scheduler or via shortcut link etc.
 #ifdef __MINGW32__
-	INITCOMMONCONTROLSEX iccx;
-	iccx.dwSize = sizeof(INITCOMMONCONTROLSEX);
-	iccx.dwICC = ICC_COOL_CLASSES | ICC_BAR_CLASSES;
-	InitCommonControlsEx(&iccx);
+	if (argc == 1) {
+		HWND consoleWnd = GetConsoleWindow();
+		DWORD dwProcessId = 0;
+		GetWindowThreadProcessId(consoleWnd, &dwProcessId);
 
-	HWND consoleWnd = GetConsoleWindow();
-	DWORD dwProcessId = 0;
-	GetWindowThreadProcessId(consoleWnd, &dwProcessId);
-	if ((GetCurrentProcessId() == dwProcessId) && (argc == 1)) {
-		MessageBox(NULL, "telxcc is a console application, please run it from cmd.exe", "telxcc", MB_OK | MB_ICONWARNING);
+		if (GetCurrentProcessId() == dwProcessId) {
+			INITCOMMONCONTROLSEX iccx;
+			iccx.dwSize = sizeof(iccx);
+			iccx.dwICC = ICC_STANDARD_CLASSES;
+			InitCommonControlsEx(&iccx);
+		
+			MessageBoxW(NULL, L"telxcc is a console application, please run it from command line (cmd.exe), scheduler, another application etc.", L"telxcc", MB_OK | MB_ICONWARNING);
+		}
 	}
 #endif
 
