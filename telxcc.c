@@ -47,6 +47,7 @@ Algorithm workflow:
 telxcc binary
 ↳ main (setup)
 ↳ main (loop, processing TS)
+	↳ (PAT, PMT, PCR processing)
 	↳ process_pes_packet (processing PES)
 		↳ process_telx_packet (processing teletext VBI stream)
 			↳ process_page (processing teletext data)
@@ -236,7 +237,7 @@ uint8_t pmt_pids_count = 0;
 uint16_t pes_pids[256] = { 0 };
 uint8_t pes_pids_count = 0;
 
-uint16_t pcr_pid = 0;
+uint16_t pcr_pid = 0xffff;
 
 // extracts magazine No from teletext page
 #define MAGAZINE(p) ((p >> 8) & 0xf)
@@ -670,7 +671,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 		optional_pes_header_length = buffer[8];
 	}
 
-	static uint8_t using_pts = NO;
+	static uint8_t using_pts = UNDEF;
 	if (using_pts == UNDEF) {
 		if ((optional_pes_header_included == YES) && ((buffer[7] & 0x80) > 0)) {
 			using_pts = YES;
@@ -888,7 +889,7 @@ int main(int argc, const char *argv[]) {
 
 		// not TS packet?
 		if (header.sync != 0x47) {
-			fprintf(stderr, "- Invalid TS packet header\n- telxcc does not work with unaligned TS\n\n");
+			fprintf(stderr, "- Invalid TS packet header\n- telxcc does not work with unaligned TS.\n\n");
 			exit(EXIT_FAILURE);
 		}
 
@@ -921,6 +922,7 @@ int main(int argc, const char *argv[]) {
 		// null packet
 		if (header.pid == 0x1fff) continue;
 
+		// TID not specified, autodetect
 		if (config.tid == 0) {
 			// process PAT
 			if ((header.pid == 0x0000) && (pmt_pids_count == 0)) {
@@ -939,21 +941,24 @@ if (pat.pointer_field > 0) {
 				//pat.last_section_number = ts_buffer[12];
 				// TODO: check CRC32
 
+				// not yet valid PAT
 				if (pat.current_next_indicator == 0) continue;
 
 				uint16_t i = 13;
 				while (i < 13 + pat.section_length - 5 - 4) {
 					pat_section_t section = { 0 };
-					section.program_num = (ts_buffer[i] << 8) | ts_buffer[i+1];
-					section.program_pid = ((ts_buffer[i+2] & 0x1f) << 8) | ts_buffer[i+3];
+					section.program_num = (ts_buffer[i] << 8) | ts_buffer[i + 1];
+					section.program_pid = ((ts_buffer[i + 2] & 0x1f) << 8) | ts_buffer[i + 3];
 					i += 4;
 
 					pmt_pids[pmt_pids_count++] = section.program_pid;
 				}
 
-				fprintf(stderr, "- No teletext PID specified, available PMTs = ");
-				for (uint16_t j = 0; j < pmt_pids_count; j++) fprintf(stderr, "0x%04x ", pmt_pids[j]);
-				fprintf(stderr, "\n");
+				VERBOSE_ONLY {
+					fprintf(stderr, "- No teletext PID specified, available PMTs = ");
+					for (uint16_t j = 0; j < pmt_pids_count; j++) fprintf(stderr, "0x%04x ", pmt_pids[j]);
+					fprintf(stderr, "\n");
+				}
 
 				continue;
 			}
@@ -965,7 +970,6 @@ if (pat.pointer_field > 0) {
 					pid_is_pmt = YES;
 					break;
 				}
-			// TODO: analyze all PMTs
 			if ((pid_is_pmt == YES) && (pes_pids_count == 0)) {
 				pmt_t pmt = { 0 };
 				pmt.pointer_field = ts_buffer[4];
@@ -985,6 +989,7 @@ if (pmt.pointer_field > 0) {
 				pmt.program_info_length = ((ts_buffer[15] & 0x03) << 8) | ts_buffer[16];
 				// TODO: check CRC32
 
+				// not yet valid PMT
 				if (pmt.current_next_indicator == 0) continue;
 
 				pcr_pid = pmt.pcr_pid;
@@ -993,11 +998,16 @@ if (pmt.pointer_field > 0) {
 				while (i < 17 + pmt.program_info_length + pmt.section_length - 4 - 9) {
 					pmt_program_descriptor_t desc = { 0 };
 					desc.stream_type = ts_buffer[i];
-					desc.elementary_pid = ((ts_buffer[i+1] & 0x1f) << 8) | ts_buffer[i+2];
-					desc.es_info_length = ((ts_buffer[i+3] & 0x03) << 8) | ts_buffer[i+4];
-					//TODO: find teletext descriptor
+					desc.elementary_pid = ((ts_buffer[i + 1] & 0x1f) << 8) | ts_buffer[i + 2];
+					desc.es_info_length = ((ts_buffer[i + 3] & 0x03) << 8) | ts_buffer[i + 4];
+					// find teletext descriptor
+					if (desc.stream_type == 0x06) {
+						if (desc.es_info_length > 0) {
+							uint8_t tag = ts_buffer[i + 5];
+							if ((tag == 0x56) || (tag == 0x45)) pes_pids[pes_pids_count++] = desc.elementary_pid;
+						}
+					}
 					i += 5 + desc.es_info_length;
-					if (desc.stream_type == 6) pes_pids[pes_pids_count++] = desc.elementary_pid;
 				}
 
 				if (pes_pids_count == 0) {
@@ -1015,9 +1025,7 @@ if (pmt.pointer_field > 0) {
 
 		if (config.tid == header.pid) {
 			// TS continuity check
-			if (continuity_counter == 255) {
-				continuity_counter = header.continuity_counter;
-			}
+			if (continuity_counter == 255) continuity_counter = header.continuity_counter;
 			else {
 				if (af_discontinuity == 0) {
 					continuity_counter = (continuity_counter + 1) % 16;
