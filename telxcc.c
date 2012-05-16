@@ -82,8 +82,9 @@ Werner Brückner -- Teletext in digital television
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include "tables_hamming.h"
-#include "tables_teletext.h"
+#include "hamming.h"
+#include "ts.h"
+#include "teletext.h"
 
 #define VERSION "2.2.0"
 
@@ -117,53 +118,6 @@ typedef enum {
 
 // size of a packet payload buffer
 #define PAYLOAD_BUFFER_SIZE 4096
-
-typedef struct {
-	uint8_t sync : 8;
-	uint8_t transport_error : 1;
-	uint8_t payload_unit_start : 1;
-	uint8_t transport_priority : 1;
-	uint16_t pid : 13;
-	uint8_t scrambling_control : 2;
-	uint8_t adaptation_field_exists : 2;
-	uint8_t continuity_counter : 4;
-	//uint8_t payload[];
-} ts_packet_t;
-
-typedef struct {
-	uint16_t program_num : 16;
-	uint16_t program_pid : 13;
-} pat_section_t;
-
-typedef struct {
-	uint8_t pointer_field : 8;
-	uint8_t table_id : 8; // 0x00
-	uint16_t section_length : 10;
-	uint8_t current_next_indicator : 1;
-	uint8_t section_number : 8;
-	uint8_t last_section_number : 8;
-	uint32_t crc32 : 32;
-} pat_t;
-
-typedef struct {
-	uint8_t stream_type : 8;
-	uint16_t elementary_pid : 13;
-	uint16_t es_info_length : 10; // or 0
-	uint8_t es_descriptor[];
-} pmt_program_descriptor_t;
-
-typedef struct {
-	uint8_t pointer_field : 8;
-	uint8_t table_id : 8; // 0x02
-	uint16_t section_length : 10;
-	uint16_t program_num : 16;
-	uint8_t current_next_indicator : 1;
-	uint8_t section_number : 8;
-	uint8_t last_section_number : 8;
-	uint16_t pcr_pid : 16; // or 0x1fff
-	uint16_t program_info_length : 10;
-	uint32_t crc32 : 32;
-} pmt_t;
 
 // 1-byte alignment; just to be sure, this struct is being used for explicit type conversion
 // FIXME: remove explicit type conversion from buffer to structs
@@ -229,15 +183,6 @@ uint8_t receiving_data = NO;
 
 // current charset (charset can be -- an very often is -- changed during transmission)
 uint8_t current_charset = 0;
-
-// global 13-bit packet stream PIDs
-uint16_t pmt_pids[256] = { 0 };
-uint8_t pmt_pids_count = 0;
-
-uint16_t pes_pids[256] = { 0 };
-uint8_t pes_pids_count = 0;
-
-uint16_t pcr_pid = 0xffff;
 
 // extracts magazine No from teletext page
 #define MAGAZINE(p) ((p >> 8) & 0xf)
@@ -734,6 +679,78 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	}
 }
 
+void analyze_pat(uint8_t *buffer, uint8_t size) {
+	if (size < 7) return;
+
+	pat_t pat = { 0 };
+	pat.pointer_field = buffer[0];
+
+//!
+if (pat.pointer_field > 0) {
+	fprintf(stderr, "! pat.pointer_field > 0 (0x%02x)\n\n", pat.pointer_field);
+	exit(EXIT_FAILURE);
+}
+
+	pat.table_id = buffer[1];
+	if (pat.table_id == 0x00) {
+		pat.section_length = ((buffer[2] & 0x03) << 8) | buffer[3];
+		pat.current_next_indicator = buffer[6] & 0x01;
+		// already valid PAT
+		if (pat.current_next_indicator == 1) {
+			uint16_t i = 9;
+			while ((i < 9 + (pat.section_length - 5 - 4)) && (i < size)) {
+				pat_section_t section = { 0 };
+				section.program_num = (buffer[i] << 8) | buffer[i + 1];
+				section.program_pid = ((buffer[i + 2] & 0x1f) << 8) | buffer[i + 3];
+				i += 4;
+				//add pmt section.program_pid;
+//fprintf(stderr, "! section. program_num = %4u, program_pid = 0x%04x (%4u)\n", section.program_num, section.program_pid, section.program_pid);
+			}
+		}
+	}
+}
+
+void analyze_pmt(uint8_t *buffer, uint8_t size) {
+	if (size < 7) return;
+
+	pmt_t pmt = { 0 };
+	pmt.pointer_field = buffer[0];
+
+//!
+if (pmt.pointer_field > 0) {
+	fprintf(stderr, "! pmt.pointer_field > 0 (0x%02x)\n\n", pmt.pointer_field);
+	exit(EXIT_FAILURE);
+}
+
+	pmt.table_id = buffer[1];
+	if (pmt.table_id == 0x02) {
+		pmt.section_length = ((buffer[2] & 0x03) << 8) | buffer[3];
+		pmt.program_num = (buffer[4] << 8) | buffer[5];
+		pmt.current_next_indicator = buffer[6] & 0x01;
+		pmt.pcr_pid = ((buffer[9] & 0x1f) << 8) | buffer[10];
+		pmt.program_info_length = ((buffer[11] & 0x03) << 8) | buffer[12];
+		// already valid PMT
+		if (pmt.current_next_indicator == 1) {
+			uint16_t i = 13 + pmt.program_info_length;
+			while ((i < 13 + (pmt.program_info_length + pmt.section_length - 4 - 9)) && (i < size)) {
+				pmt_program_descriptor_t desc = { 0 };
+				desc.stream_type = buffer[i];
+				desc.elementary_pid = ((buffer[i + 1] & 0x1f) << 8) | buffer[i + 2];
+				desc.es_info_length = ((buffer[i + 3] & 0x03) << 8) | buffer[i + 4];
+fprintf(stderr, "! .es_info_length = (%4u)\n", desc.es_info_length);
+				if (desc.stream_type == 0x06) {
+					if (desc.es_info_length > 0) {
+						pmt_teletext_descriptor_t desc2 = { 0 };
+						desc2.descriptor_tag = buffer[i + 5];
+fprintf(stderr, "! pmt_teletext_descriptor_t.descriptor_tag = 0x%02x (%3u)\n", desc2.descriptor_tag, desc2.descriptor_tag);
+					}
+				}
+				i += 5 + desc.es_info_length;
+			}
+		}
+	}
+}
+
 // graceful exit support
 uint8_t exit_request = NO;
 
@@ -899,23 +916,21 @@ int main(int argc, const char *argv[]) {
 			continue;
 		}
 
-		if (header.pid == pcr_pid) {
-			// if available, calculate current PCR
-			if (header.adaptation_field_exists > 0) {
-				// PCR in adaptation field
-				uint8_t af_pcr_exists = (ts_buffer[5] & 0x10) >> 4;
-				if (af_pcr_exists > 0) {
-					uint64_t pts = 0;
-					pts |= (ts_buffer[6] << 25);
-					pts |= (ts_buffer[7] << 17);
-					pts |= (ts_buffer[8] << 9);
-					pts |= (ts_buffer[9] << 1);
-					pts |= (ts_buffer[10] >> 7);
-					global_timestamp = pts / 90;
-					pts = ((ts_buffer[10] & 0x01) << 8);
-					pts |= ts_buffer[11];
-					global_timestamp += pts / 27000;
-				}
+		// if available, calculate current PCR
+		if (header.adaptation_field_exists > 0) {
+			// PCR in adaptation field
+			uint8_t af_pcr_exists = (ts_buffer[5] & 0x10) >> 4;
+			if (af_pcr_exists > 0) {
+				uint64_t pts = 0;
+				pts |= (ts_buffer[6] << 25);
+				pts |= (ts_buffer[7] << 17);
+				pts |= (ts_buffer[8] << 9);
+				pts |= (ts_buffer[9] << 1);
+				pts |= (ts_buffer[10] >> 7);
+				global_timestamp = pts / 90;
+				pts = ((ts_buffer[10] & 0x01) << 8);
+				pts |= ts_buffer[11];
+				global_timestamp += pts / 27000;
 			}
 		}
 
@@ -925,105 +940,34 @@ int main(int argc, const char *argv[]) {
 		// TID not specified, autodetect
 		if (config.tid == 0) {
 			// process PAT
-			if ((header.pid == 0x0000) && (pmt_pids_count == 0)) {
-				pat_t pat = { 0 };
-				pat.pointer_field = ts_buffer[4];
-if (pat.pointer_field > 0) {
-	fprintf(stderr, "! pat.pointer_field > 0 (0x%02x)\n\n", pat.pointer_field);
-	exit(EXIT_FAILURE);
-}
-				pat.table_id = ts_buffer[5];
-				if (pat.table_id != 0x00) continue;
-
-				pat.section_length = ((ts_buffer[6] & 0x03) << 8) | ts_buffer[7];
-				pat.current_next_indicator = ts_buffer[10] & 0x01;
-				//pat.section_number = ts_buffer[11];
-				//pat.last_section_number = ts_buffer[12];
-				// TODO: check CRC32
-
-				// not yet valid PAT
-				if (pat.current_next_indicator == 0) continue;
-
-				uint16_t i = 13;
-				while (i < 13 + pat.section_length - 5 - 4) {
-					pat_section_t section = { 0 };
-					section.program_num = (ts_buffer[i] << 8) | ts_buffer[i + 1];
-					section.program_pid = ((ts_buffer[i + 2] & 0x1f) << 8) | ts_buffer[i + 3];
-					i += 4;
-
-					pmt_pids[pmt_pids_count++] = section.program_pid;
-				}
-
-				VERBOSE_ONLY {
-					fprintf(stderr, "- No teletext PID specified, available PMTs = ");
-					for (uint16_t j = 0; j < pmt_pids_count; j++) fprintf(stderr, "0x%04x ", pmt_pids[j]);
-					fprintf(stderr, "\n");
-				}
-
+			if (header.pid == 0x0000) {
+				analyze_pat(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
-
+			
 			// process PMT
-			uint8_t pid_is_pmt = NO;
-			for (uint16_t j = 0; j < pmt_pids_count; j++)
-				if (header.pid == pmt_pids[j]) {
-					pid_is_pmt = YES;
-					break;
-				}
-			if ((pid_is_pmt == YES) && (pes_pids_count == 0)) {
-				pmt_t pmt = { 0 };
-				pmt.pointer_field = ts_buffer[4];
-if (pmt.pointer_field > 0) {
-	fprintf(stderr, "! pmt.pointer_field > 0 (0x%02x)\n\n", pmt.pointer_field);
-	exit(EXIT_FAILURE);
-}
-				pmt.table_id = ts_buffer[5];
-				if (pmt.table_id != 0x02) continue;
-
-				pmt.section_length = ((ts_buffer[6] & 0x03) << 8) | ts_buffer[7];
-				//pmt.program_num = (ts_buffer[8] << 8) | ts_buffer[9];
-				pmt.current_next_indicator = ts_buffer[10] & 0x01;
-				//pmt.section_number = ts_buffer[11];
-				//pmt.last_section_number = ts_buffer[12];
-				pmt.pcr_pid = ((ts_buffer[13] & 0x1f) << 8) | ts_buffer[14];
-				pmt.program_info_length = ((ts_buffer[15] & 0x03) << 8) | ts_buffer[16];
-				// TODO: check CRC32
-
-				// not yet valid PMT
-				if (pmt.current_next_indicator == 0) continue;
-
-				pcr_pid = pmt.pcr_pid;
-
-				uint16_t i = 17 + pmt.program_info_length;
-				while (i < 17 + pmt.program_info_length + pmt.section_length - 4 - 9) {
-					pmt_program_descriptor_t desc = { 0 };
-					desc.stream_type = ts_buffer[i];
-					desc.elementary_pid = ((ts_buffer[i + 1] & 0x1f) << 8) | ts_buffer[i + 2];
-					desc.es_info_length = ((ts_buffer[i + 3] & 0x03) << 8) | ts_buffer[i + 4];
-					// find teletext descriptor
-					if (desc.stream_type == 0x06) {
-						if (desc.es_info_length > 0) {
-							uint8_t tag = ts_buffer[i + 5];
-							if ((tag == 0x56) || (tag == 0x45)) pes_pids[pes_pids_count++] = desc.elementary_pid;
-						}
-					}
-					i += 5 + desc.es_info_length;
-				}
-
-				if (pes_pids_count == 0) {
-					fprintf(stderr, "- No teletext PID specified, no suitable PID found in PAT/PMT tables. Please specify teletext PID via -t parameter.\n\n");
-					exit(EXIT_FAILURE);
-				}
-				else {
-					fprintf(stderr, "- No teletext PID specified, first suitable PID = %"PRIu16" (0x%x)\n", pes_pids[0], pes_pids[0]);
-					config.tid = pes_pids[0];
-				}
-
+			if (header.pid == 0x0100 /*any in pmt_pid*/) {
+				analyze_pmt(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
 		}
 
+/*
+			// old bruteforce detection
+			if (pmt_pid == 0xfffe) {
+				if ((header.payload_unit_start > 0) && ((ts_buffer[4] == 0x00) && (ts_buffer[5] == 0x00) && (ts_buffer[6] == 0x01) && (ts_buffer[7] == 0xbd))) {
+					config.tid = header.pid;
+					fprintf(stderr, "- No teletext PID specified, first received suitable stream PID is %"PRIu16" (0x%x), not guaranteed\n", config.tid, config.tid);
+				}
+				else continue;
+			}
+								fprintf(stderr, "- No teletext PID specified, first suitable stream PID from PAT/PMT = %"PRIu16" (0x%x)\n", config.tid, config.tid);
+								break;
+*/
+
+
 		if (config.tid == header.pid) {
+continue;
 			// TS continuity check
 			if (continuity_counter == 255) continuity_counter = header.continuity_counter;
 			else {
@@ -1042,9 +986,7 @@ if (pmt.pointer_field > 0) {
 			if ((header.payload_unit_start == 0) && (payload_counter == 0)) continue;
 
 			// proceed with payload buffer
-			if ((header.payload_unit_start > 0) && (payload_counter > 0)) {
-				process_pes_packet(payload_buffer, payload_counter);
-			}
+			if ((header.payload_unit_start > 0) && (payload_counter > 0)) process_pes_packet(payload_buffer, payload_counter);
 
 			// new payload frame start
 			if (header.payload_unit_start > 0) payload_counter = 0;
@@ -1067,6 +1009,7 @@ if (pmt.pointer_field > 0) {
 	}
 
 	VERBOSE_ONLY {
+		if (config.tid == 0) fprintf(stderr, "- No teletext PID specified, no suitable PID found in PAT/PMT tables. Please specify teletext PID via -t parameter.\n");
 		if (frames_produced == 0) fprintf(stderr, "- No frames produced. CC teletext page number was probably wrong.\n");
 		fprintf(stderr, "- There were some CC data carried via pages = ");
 		// We ignore i = 0xff, because 0xffs are teletext ending frames
