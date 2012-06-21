@@ -15,6 +15,9 @@ Some portions/inspirations:
 Code contribution:
 Laurent Debacker (https://github.com/debackerl)
 
+Windows App Icon:
+(c) Oxygen Team, http://www.oxygen-icons.org
+
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -41,18 +44,6 @@ Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and co
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
 characterised by the use of spacing attributes only and a limited alphanumeric and mosaics repertoire.
 Presentation Level 1.5 decoder responds as Level 1 but the character repertoire is extended via packets X/26.
-
-
-Algorithm workflow:
-telxcc binary
-↳ main (setup)
-↳ main (loop, processing TS)
-	↳ (PAT, PMT, PCR processing)
-	↳ process_pes_packet (processing PES)
-		↳ process_telx_packet (processing teletext VBI stream)
-			↳ process_page (processing teletext data)
-↳ main (clean up)
-
 
 Further documentation:
 ETSI TS 101 154 V1.9.1 (2009-09), Technical Specification
@@ -83,7 +74,6 @@ Werner Brückner -- Teletext in digital television
 #include <unistd.h>
 #include <inttypes.h>
 #include "hamming.h"
-#include "ts.h"
 #include "teletext.h"
 
 #define VERSION "2.2.0"
@@ -118,6 +108,93 @@ typedef enum {
 
 // size of a packet payload buffer
 #define PAYLOAD_BUFFER_SIZE 4096
+
+/*
+// number of TS packets to be analyzed while searching for PMTs
+#define TS_ANALYSIS_LENGTH 4096
+*/
+
+typedef struct {
+	uint8_t sync : 8;
+	uint8_t transport_error : 1;
+	uint8_t payload_unit_start : 1;
+	uint8_t transport_priority : 1;
+	uint16_t pid : 13;
+	uint8_t scrambling_control : 2;
+	uint8_t adaptation_field_exists : 2;
+	uint8_t continuity_counter : 4;
+} ts_packet_t;
+
+typedef struct {
+	uint16_t program_num : 16;
+	uint16_t program_pid : 13;
+} pat_section_t;
+
+typedef struct {
+	uint8_t pointer_field : 8;
+	uint8_t table_id : 8; // 0x00
+	uint16_t section_length : 10;
+	uint8_t current_next_indicator : 1;
+} pat_t;
+
+typedef struct {
+	uint8_t stream_type : 8;
+	uint16_t elementary_pid : 13;
+	uint16_t es_info_length : 10;
+} pmt_program_descriptor_t;
+
+/*
+typedef struct {
+	uint8_t descriptor_tag : 8;
+	uint8_t descriptor_length : 8;
+} pmt_teletext_descriptor_t;
+
+typedef struct {
+	uint32_t iso_639_language_code : 24;
+	uint8_t teletext_type : 5;
+	uint8_t teletext_magazine_number : 4;
+	uint8_t teletext_page_number : 8;
+} pmt_teletext_descriptor_payload_t;
+*/
+
+typedef struct {
+	uint8_t pointer_field : 8;
+	uint8_t table_id : 8; // 0x02
+	uint16_t section_length : 10;
+	uint16_t program_num : 16;
+	uint8_t current_next_indicator : 1;
+	uint16_t pcr_pid : 16;
+	uint16_t program_info_length : 10;
+} pmt_t;
+
+/*
+typedef enum {
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_RESERVED = 0,
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_INITIAL = 1,
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_SUBTITLE = 2,
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_ADDITIONAL_INFO = 3,
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_PROGRAM_SCHEDULE = 4,
+	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_SUBTITILE_CC = 5
+} teletext_descriptor_teletext_type_t;
+*/
+
+typedef enum {
+	DATA_UNIT_EBU_TELETEXT_NONSUBTITLE = 0x02,
+	DATA_UNIT_EBU_TELETEXT_SUBTITLE = 0x03,
+	DATA_UNIT_EBU_TELETEXT_INVERTED = 0x0c,
+	DATA_UNIT_VPS = 0xc3,
+	DATA_UNIT_CLOSED_CAPTIONS = 0xc5
+} data_unit_t;
+
+typedef enum {
+	TRANSMISSION_MODE_PARALLEL = 0,
+	TRANSMISSION_MODE_SERIAL = 1
+} transmission_mode_t;
+
+const char* TTXT_COLOURS[8] = {
+//  black,     red,       green,     yellow,    blue,      magenta,   cyan,      white
+	"#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
+};
 
 // 1-byte alignment; just to be sure, this struct is being used for explicit type conversion
 // FIXME: remove explicit type conversion from buffer to structs
@@ -183,6 +260,26 @@ uint8_t receiving_data = NO;
 
 // current charset (charset can be -- an very often is -- changed during transmission)
 uint8_t current_charset = 0;
+
+// PMTs table
+#define TS_PMT_MAP_SIZE 128
+uint16_t pmt_map[TS_PMT_MAP_SIZE] = { 0 };
+uint16_t pmt_map_length = 0;
+
+// TTXT streams table
+#define TS_PMT_TTXT_MAP_SIZE 128
+uint16_t pmt_ttxt_map[TS_PMT_MAP_SIZE] = { 0 };
+uint16_t pmt_ttxt_map_length = 0;
+
+inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
+	bool_t r = NO;
+	for (uint16_t i = 0; i < length; i++)
+		if (array[i] == element) {
+			r = YES;
+			break;
+		}
+	return r;
+}
 
 // extracts magazine No from teletext page
 #define MAGAZINE(p) ((p >> 8) & 0xf)
@@ -334,7 +431,7 @@ void process_page(teletext_page_t *page) {
 
 			if (col == col_start) {
 				if ((foreground_color != 0x7) && (config.colours == YES)) {
-					fprintf(stdout, "<font color=\"%s\">", COLOURS[foreground_color]);
+					fprintf(stdout, "<font color=\"%s\">", TTXT_COLOURS[foreground_color]);
 					font_tag_opened = YES;
 				}
 			}
@@ -352,7 +449,7 @@ void process_page(teletext_page_t *page) {
 						// black is considered as white for telxcc purpose
 						// telxcc writes <font/> tags only when needed
 						if ((v > 0x0) && (v < 0x7)) {
-							fprintf(stdout, "<font color=\"%s\">", COLOURS[v]);
+							fprintf(stdout, "<font color=\"%s\">", TTXT_COLOURS[v]);
 							font_tag_opened = YES;
 						}
 					}
@@ -702,9 +799,17 @@ if (pat.pointer_field > 0) {
 				pat_section_t section = { 0 };
 				section.program_num = (buffer[i] << 8) | buffer[i + 1];
 				section.program_pid = ((buffer[i + 2] & 0x1f) << 8) | buffer[i + 3];
+
+				if (in_array(pmt_map, pmt_map_length, section.program_pid) == NO) {
+					if (pmt_map_length < TS_PMT_MAP_SIZE) {
+						pmt_map[pmt_map_length++] = section.program_pid;
+#ifdef DEBUG
+						fprintf(stderr, "- Found PMT for SID %"PRIu16" (0x%x)\n", section.program_num, section.program_num);
+#endif
+					}
+				}
+
 				i += 4;
-				//add pmt section.program_pid;
-//fprintf(stderr, "! section. program_num = %4u, program_pid = 0x%04x (%4u)\n", section.program_num, section.program_pid, section.program_pid);
 			}
 		}
 	}
@@ -737,14 +842,19 @@ if (pmt.pointer_field > 0) {
 				desc.stream_type = buffer[i];
 				desc.elementary_pid = ((buffer[i + 1] & 0x1f) << 8) | buffer[i + 2];
 				desc.es_info_length = ((buffer[i + 3] & 0x03) << 8) | buffer[i + 4];
-fprintf(stderr, "! .es_info_length = (%4u)\n", desc.es_info_length);
-				if (desc.stream_type == 0x06) {
-					if (desc.es_info_length > 0) {
-						pmt_teletext_descriptor_t desc2 = { 0 };
-						desc2.descriptor_tag = buffer[i + 5];
-fprintf(stderr, "! pmt_teletext_descriptor_t.descriptor_tag = 0x%02x (%3u)\n", desc2.descriptor_tag, desc2.descriptor_tag);
+
+				uint8_t descriptor_tag = buffer[i + 5];
+				// descriptor_tag: 0x45 = VBI_data_descriptor, 0x46 = VBI_teletext_descriptor, 0x56 = teletext_descriptor
+				if ((desc.stream_type == 0x06) && ((descriptor_tag == 0x45) || (descriptor_tag == 0x46) || (descriptor_tag == 0x56))) {
+					if (in_array(pmt_ttxt_map, pmt_ttxt_map_length, desc.elementary_pid) == NO) {
+						if (pmt_ttxt_map_length < TS_PMT_TTXT_MAP_SIZE) {
+							pmt_ttxt_map[pmt_ttxt_map_length++] = desc.elementary_pid;
+							if (config.tid == 0) config.tid = desc.elementary_pid;
+							fprintf(stderr, "- Found VBI/teletext stream ID %"PRIu16" (0x%x) for SID %"PRIu16" (0x%x)\n", desc.elementary_pid, desc.elementary_pid, pmt.program_num, pmt.program_num);
+						}
 					}
 				}
+
 				i += 5 + desc.es_info_length;
 			}
 		}
@@ -937,37 +1047,22 @@ int main(int argc, const char *argv[]) {
 		// null packet
 		if (header.pid == 0x1fff) continue;
 
-		// TID not specified, autodetect
+		// TID not specified, autodetect via PAT/PMT
 		if (config.tid == 0) {
 			// process PAT
 			if (header.pid == 0x0000) {
 				analyze_pat(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
-			
+
 			// process PMT
-			if (header.pid == 0x0100 /*any in pmt_pid*/) {
+			if (in_array(pmt_map, pmt_map_length, header.pid) == YES) {
 				analyze_pmt(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
 		}
 
-/*
-			// old bruteforce detection
-			if (pmt_pid == 0xfffe) {
-				if ((header.payload_unit_start > 0) && ((ts_buffer[4] == 0x00) && (ts_buffer[5] == 0x00) && (ts_buffer[6] == 0x01) && (ts_buffer[7] == 0xbd))) {
-					config.tid = header.pid;
-					fprintf(stderr, "- No teletext PID specified, first received suitable stream PID is %"PRIu16" (0x%x), not guaranteed\n", config.tid, config.tid);
-				}
-				else continue;
-			}
-								fprintf(stderr, "- No teletext PID specified, first suitable stream PID from PAT/PMT = %"PRIu16" (0x%x)\n", config.tid, config.tid);
-								break;
-*/
-
-
 		if (config.tid == header.pid) {
-continue;
 			// TS continuity check
 			if (continuity_counter == 255) continuity_counter = header.continuity_counter;
 			else {
