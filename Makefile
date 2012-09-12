@@ -23,6 +23,7 @@ $(EXEC) : $(OBJS)
 profiled :
 	make CCFLAGS="$(CCFLAGS) -fprofile-generate" LDFLAGS="$(LDFLAGS) -fprofile-generate" $(EXEC)
 	find . -type f -iname \*.ts -exec sh -c './telxcc -1 -c -v -p 888 < "{}" > /dev/null 2>> profile.log' \;
+	find . -type f -iname \*.ts -exec sh -c './telxcc -1 -s -v -p 888 < "{}" > /dev/null 2>> profile.log' \;
 	find . -type f -iname \*.ts -exec sh -c './telxcc -1 -v -p 777 < "{}" > /dev/null 2>> profile.log' \;
 	find . -type f -iname \*.ts -exec sh -c './telxcc < "{}" > /dev/null 2>> profile.log' \;
 	make clean

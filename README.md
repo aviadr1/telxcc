@@ -42,9 +42,9 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.1.2 (Built on May  4 2012)
+    Version 2.3.0 (Built on Sep 12 2012)
     
-    Usage: telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c]
+    Usage: ./telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-s [REF]]
       STDIN       transport stream
       STDOUT      subtitles in SubRip SRT file format (UTF-8 encoded)
       -h          this help text
@@ -55,7 +55,10 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -n          do not print UTF-8 BOM characters to the file
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
-
+      -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
+                  if REF (unix timestamp) is ommited, use current system time,
+                  telxcc will automatically switch to transport stream UTC timestamps when available
+    
 ## Usage example
 
     $ ./telxcc -p 777 < 2012-02-15_1900_WWW_NRK.ts > dagsrevyen.srt ↵
@@ -75,15 +78,6 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     - Done (562995 teletext packets processed, 629 SRT frames written)
 
     $ _
-
-## Other notes
-
-There are some notes on my DVB-T capture and processing chains in notes folder.
-
-* Task are parallelized (even over multiple files processing -- eg. encoding audio from file 1.ts and video from file 2.ts)
-* MP4 output files are fully iPhone/iPad (and also Mac OS X) compatible *including* CC(!) and HTTP streaming (iOS >= 5 and (iPhone >= 4 or iPad >=2))
-
-**Soon I will also launch NG version of [dedicated DVB recording box](https://fbcdn-sphotos-a.akamaihd.net/hphotos-ak-prn1/s720x720/533121_141208216005755_100003497326638_155380_1976060360_n.jpg). During testing in Prague it currently processes 80 Mbit/s of 12 TV streams and keeps and just-in-time processes last 48 hours of TV broadcasting in Czech Republic. This I call time-shifting ;-) Stay tuned!**
 
 ## Pricing
 

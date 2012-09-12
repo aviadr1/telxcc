@@ -76,7 +76,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define VERSION "2.2.0"
+#define VERSION "2.3.0"
 
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
@@ -108,11 +108,6 @@ typedef enum {
 
 // size of a packet payload buffer
 #define PAYLOAD_BUFFER_SIZE 4096
-
-/*
-// number of TS packets to be analyzed while searching for PMTs
-#define TS_ANALYSIS_LENGTH 4096
-*/
 
 typedef struct {
 	uint8_t sync : 8;
@@ -224,6 +219,8 @@ struct {
 	uint8_t colours : 1; // output <font...></font> tags?
 	uint8_t bom : 1; // print UTF-8 BOM characters at the beginning of output
 	uint8_t nonempty : 1; // produce at least one (dummy) frame
+	uint8_t se_mode : 1; // search engine compatible mode
+	uint64_t utc_refvalue; // UTC referential value
 } config = { 0 };
 
 // macro -- output only when increased verbosity was turned on
@@ -261,16 +258,29 @@ uint8_t receiving_data = NO;
 // current charset (charset can be -- an very often is -- changed during transmission)
 uint8_t current_charset = 0;
 
+// entities, used in colour mode, to replace unsafe HTML tag chars
+struct {
+	uint16_t character;
+	char *entity;
+} const ENTITIES[] = {
+	{ '<', "&lt;" },
+	{ '>', "&gt;" },
+	{ '&', "&amp;" }
+};
+
 // PMTs table
 #define TS_PMT_MAP_SIZE 128
 uint16_t pmt_map[TS_PMT_MAP_SIZE] = { 0 };
-uint16_t pmt_map_length = 0;
+uint16_t pmt_map_count = 0;
 
 // TTXT streams table
 #define TS_PMT_TTXT_MAP_SIZE 128
 uint16_t pmt_ttxt_map[TS_PMT_MAP_SIZE] = { 0 };
-uint16_t pmt_ttxt_map_length = 0;
+uint16_t pmt_ttxt_map_count = 0;
 
+#define array_length(a) (sizeof(a)/sizeof(a[0]))
+
+// helper, linear searcher far a value
 inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
 	bool_t r = NO;
 	for (uint16_t i = 0; i < length; i++)
@@ -379,16 +389,21 @@ void process_page(teletext_page_t *page) {
 
 	if (page->show_timestamp > page->hide_timestamp) page->hide_timestamp = page->show_timestamp;
 
-	char timecode_show[24] = { 0 };
-	timestamp_to_srttime(page->show_timestamp, timecode_show);
-	timecode_show[12] = 0;
-
-	char timecode_hide[24] = { 0 };
-	timestamp_to_srttime(page->hide_timestamp, timecode_hide);
-	timecode_hide[12] = 0;
-
-	// print SRT frame
-	fprintf(stdout, "%"PRIu32"\r\n%s --> %s\r\n", ++frames_produced, timecode_show, timecode_hide);
+	if (config.se_mode == YES) {
+		++frames_produced;
+		fprintf(stdout, "%"PRIu64"|", page->show_timestamp / 1000);
+	}
+	else {
+		char timecode_show[24] = { 0 };
+		timestamp_to_srttime(page->show_timestamp, timecode_show);
+		timecode_show[12] = 0;
+		
+		char timecode_hide[24] = { 0 };
+		timestamp_to_srttime(page->hide_timestamp, timecode_hide);
+		timecode_hide[12] = 0;
+		
+		fprintf(stdout, "%"PRIu32"\r\n%s --> %s\r\n", ++frames_produced, timecode_show, timecode_hide);
+	}
 
 	// process data
 	for (uint8_t row = 1; row < 25; row++) {
@@ -457,6 +472,19 @@ void process_page(teletext_page_t *page) {
 				}
 
 				if (v >= 0x20) {
+					// translate some chars into entities, if in colour mode
+					if (config.colours == YES) {
+						for (uint8_t i = 0; i < array_length(ENTITIES); i++)
+							if (v == ENTITIES[i].character) {
+								fprintf(stdout, "%s", ENTITIES[i].entity);
+								// v < 0x20 won't be printed in next block
+								v = 0;
+								break;
+							}
+					}
+				}
+
+				if (v >= 0x20) {
 					char u[4] = {0, 0, 0, 0};
 					ucs2_to_utf8(u, v);
 					fprintf(stdout, "%s", u);
@@ -464,12 +492,14 @@ void process_page(teletext_page_t *page) {
 			}
 		}
 
+		// no tag will left opened!
 		if ((config.colours == YES) && (font_tag_opened == YES)) {
 			fprintf(stdout, "</font>");
 			font_tag_opened = NO;
 		}
 
-		fprintf(stdout, "\r\n");
+		// line delimiter
+		fprintf(stdout, "%s", (config.se_mode == YES) ? " " : "\r\n");
 	}
 
 	fprintf(stdout, "\r\n");
@@ -538,21 +568,8 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		receiving_data = YES;
 
 		// remap current Latin G0 chars
-		// TODO: refactore
 		if (charset != current_charset) {
-			G0[LATIN][0x23 - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 0];
-			G0[LATIN][0x24 - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 1];
-			G0[LATIN][0x40 - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 2];
-			G0[LATIN][0x5b - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 3];
-			G0[LATIN][0x5c - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 4];
-			G0[LATIN][0x5d - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 5];
-			G0[LATIN][0x5e - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 6];
-			G0[LATIN][0x5f - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 7];
-			G0[LATIN][0x60 - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 8];
-			G0[LATIN][0x7b - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][ 9];
-			G0[LATIN][0x7c - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][10];
-			G0[LATIN][0x7d - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][11];
-			G0[LATIN][0x7e - 0x20] = G0_LATIN_NATIONAL_SUBSETS[charset][12];
+			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSET_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[charset][j];
 			current_charset = charset;
 			VERBOSE_ONLY fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x\n", current_charset);
 		}
@@ -676,6 +693,12 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 
 				VERBOSE_ONLY fprintf(stderr, "- Transmission mode = %s\n", (transmission_mode == TRANSMISSION_MODE_SERIAL ? "serial" : "parallel"));
 
+				if (config.se_mode == YES) {
+					fprintf(stderr, "- Broadcast Service Data Packet received, resetting UTC referential value to %s", ctime(&t0));
+					config.utc_refvalue = t;
+					states.pts_initialized = NO;
+				}
+
 				states.programme_info_processed = YES;
 			}
 		}
@@ -745,7 +768,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	static int64_t delta = 0;
 	static uint32_t t0 = 0;
 	if (states.pts_initialized == NO) {
-		delta = 1000 * config.offset - t;
+		delta = 1000 * config.offset + 1000 * config.utc_refvalue - t;
 		t0 = t;
 		states.pts_initialized = YES;
 	}
@@ -800,9 +823,9 @@ if (pat.pointer_field > 0) {
 				section.program_num = (buffer[i] << 8) | buffer[i + 1];
 				section.program_pid = ((buffer[i + 2] & 0x1f) << 8) | buffer[i + 3];
 
-				if (in_array(pmt_map, pmt_map_length, section.program_pid) == NO) {
-					if (pmt_map_length < TS_PMT_MAP_SIZE) {
-						pmt_map[pmt_map_length++] = section.program_pid;
+				if (in_array(pmt_map, pmt_map_count, section.program_pid) == NO) {
+					if (pmt_map_count < TS_PMT_MAP_SIZE) {
+						pmt_map[pmt_map_count++] = section.program_pid;
 #ifdef DEBUG
 						fprintf(stderr, "- Found PMT for SID %"PRIu16" (0x%x)\n", section.program_num, section.program_num);
 #endif
@@ -846,9 +869,9 @@ if (pmt.pointer_field > 0) {
 				uint8_t descriptor_tag = buffer[i + 5];
 				// descriptor_tag: 0x45 = VBI_data_descriptor, 0x46 = VBI_teletext_descriptor, 0x56 = teletext_descriptor
 				if ((desc.stream_type == 0x06) && ((descriptor_tag == 0x45) || (descriptor_tag == 0x46) || (descriptor_tag == 0x56))) {
-					if (in_array(pmt_ttxt_map, pmt_ttxt_map_length, desc.elementary_pid) == NO) {
-						if (pmt_ttxt_map_length < TS_PMT_TTXT_MAP_SIZE) {
-							pmt_ttxt_map[pmt_ttxt_map_length++] = desc.elementary_pid;
+					if (in_array(pmt_ttxt_map, pmt_ttxt_map_count, desc.elementary_pid) == NO) {
+						if (pmt_ttxt_map_count < TS_PMT_TTXT_MAP_SIZE) {
+							pmt_ttxt_map[pmt_ttxt_map_count++] = desc.elementary_pid;
 							if (config.tid == 0) config.tid = desc.elementary_pid;
 							fprintf(stderr, "- Found VBI/teletext stream ID %"PRIu16" (0x%x) for SID %"PRIu16" (0x%x)\n", desc.elementary_pid, desc.elementary_pid, pmt.program_num, pmt.program_num);
 						}
@@ -885,7 +908,7 @@ int main(int argc, const char *argv[]) {
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
-			fprintf(stderr, "Usage: telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c]\n");
+			fprintf(stderr, "Usage: %s [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-s [REF]]\n", argv[0]);
 			fprintf(stderr, "  STDIN       transport stream\n");
 			fprintf(stderr, "  STDOUT      subtitles in SubRip SRT file format (UTF-8 encoded)\n");
 			fprintf(stderr, "  -h          this help text\n");
@@ -896,6 +919,9 @@ int main(int argc, const char *argv[]) {
 			fprintf(stderr, "  -n          do not print UTF-8 BOM characters to the file\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
+			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
+			fprintf(stderr, "              if REF (unix timestamp) is ommited, use current system time,\n");
+			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
 			fprintf(stderr, "\n");
 			exit(EXIT_SUCCESS);
 		}
@@ -913,6 +939,19 @@ int main(int argc, const char *argv[]) {
 			config.colours = YES;
 		else if (strcmp(argv[i], "-v") == 0)
 			config.verbose = YES;
+		else if (strcmp(argv[i], "-s") == 0) {
+			config.se_mode = YES;
+			uint64_t t = 0;
+			if (argc > i + 1) {
+				t = atoi(argv[i + 1]); 
+				if (t > 0) i++;
+			}
+			if (t <= 0) {
+				time_t now = time(NULL);
+				t = time(&now);
+			}
+			config.utc_refvalue = t;
+		}
 		else {
 			fprintf(stderr, "- Unknown option %s\n", argv[i]);
 			exit(EXIT_FAILURE);
@@ -949,6 +988,11 @@ int main(int argc, const char *argv[]) {
 		}
 	}
 */
+
+	if (config.se_mode == YES) {
+		time_t t0 = (time_t)config.utc_refvalue;
+		fprintf(stderr, "- Search engine mode active, UTC referential value = %s", ctime(&t0));
+	}
 
 	// teletext page number out of range
 	if ((config.page != 0) && ((config.page < 100) || (config.page > 899))) {
@@ -1056,7 +1100,7 @@ int main(int argc, const char *argv[]) {
 			}
 
 			// process PMT
-			if (in_array(pmt_map, pmt_map_length, header.pid) == YES) {
+			if (in_array(pmt_map, pmt_map_count, header.pid) == YES) {
 				analyze_pmt(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
@@ -1116,13 +1160,13 @@ int main(int argc, const char *argv[]) {
 		fprintf(stderr, "\n");
 	}
 
-	if ((frames_produced == 0) && (config.nonempty == YES)) {
+	if ((frames_produced == 0) && (config.nonempty == YES) && (config.se_mode == NO)) {
 		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:10,000\r\n(no closed captions available)\r\n\r\n");
 		fflush(stdout);
 		frames_produced++;
 	}
 
-	fprintf(stderr, "- Done (%"PRIu32" teletext packets processed, %"PRIu32" SRT frames written)\n", packet_counter, frames_produced);
+	fprintf(stderr, "- Done (%"PRIu32" teletext packets processed, %"PRIu32" frames produced)\n", packet_counter, frames_produced);
 	fprintf(stderr, "\n");
 
 	return EXIT_SUCCESS;
