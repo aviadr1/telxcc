@@ -66,7 +66,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.1.2 (Built on May  4 2012)
+    Version 2.3.0 (Built on Sep 12 2012)
 
     - No teletext PID specified, first received suitable stream PID is 576 (0x240), not guaranteed
     - PID 0xbd PTS available

@@ -12,12 +12,6 @@ Some portions/inspirations:
 (c) 2007 Vladimir Voroshilov <voroshil@gmail.com>, mplayer
 (c) 2001, 2002, 2003, 2004, 2007 Michael H. Schimek, libzvbi -- Error correction functions
 
-Code contribution:
-Laurent Debacker (https://github.com/debackerl)
-
-Windows App Icon:
-(c) Oxygen Team, http://www.oxygen-icons.org
-
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -76,7 +70,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define VERSION "2.3.0"
+#define VERSION "2.3.1"
 
 // switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
@@ -397,11 +391,11 @@ void process_page(teletext_page_t *page) {
 		char timecode_show[24] = { 0 };
 		timestamp_to_srttime(page->show_timestamp, timecode_show);
 		timecode_show[12] = 0;
-		
+
 		char timecode_hide[24] = { 0 };
 		timestamp_to_srttime(page->hide_timestamp, timecode_hide);
 		timecode_hide[12] = 0;
-		
+
 		fprintf(stdout, "%"PRIu32"\r\n%s --> %s\r\n", ++frames_produced, timecode_show, timecode_hide);
 	}
 
@@ -943,7 +937,7 @@ int main(int argc, const char *argv[]) {
 			config.se_mode = YES;
 			uint64_t t = 0;
 			if (argc > i + 1) {
-				t = atoi(argv[i + 1]); 
+				t = atoi(argv[i + 1]);
 				if (t > 0) i++;
 			}
 			if (t <= 0) {
