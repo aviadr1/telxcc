@@ -385,7 +385,7 @@ void process_page(teletext_page_t *page) {
 
 	if (config.se_mode == YES) {
 		++frames_produced;
-		fprintf(stdout, "%.3f|", page->show_timestamp / 1000.0f);
+		fprintf(stdout, "%.3f|", (double)page->show_timestamp / 1000);
 	}
 	else {
 		char timecode_show[24] = { 0 };
