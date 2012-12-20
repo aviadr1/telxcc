@@ -5,11 +5,16 @@ telxcc is utility extracting teletext Closed Captions from Transport Stream file
 telxcc is
 
 * tiny and lightweight (few KiBs binary, no lib dependencies)
-* multiplatform (Mac, Linux, Windows)
+* multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
 * modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
 * high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiBps, with less than 30 % 1 CPU core utilization, SSD is the bottleneck)
 * easy to use
+
+## Compiled binaries
+
+* [telxcc v2.3.1 — x86 compiled binaries (Linux, Mac OS X, Windows)](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip)
+* [telxcc v2.3.1 — x86 compiled binaries, signature](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip.asc)
 
 ## Build
 
