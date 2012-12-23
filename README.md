@@ -17,13 +17,9 @@ telxcc is
 * [telxcc v2.3.1 — x86 compiled binaries (Linux, Mac OS X, Windows)](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip)
 * [telxcc v2.3.1 — x86 compiled binaries, GPG signature](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip.asc)
 
-## Pricing
+## Pricing and Support
 
-telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc).
-
-## Support
-
-Any bug reports are very welcome. Unfortunately I am unable to provide you with free support. Sorry.
+telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports are very welcome. Unfortunately I am unable to provide you with free support.
 
 ## Build
 

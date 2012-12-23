@@ -33,6 +33,7 @@ David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegi
 Professor Francis F Steen and his team from UCLA for contribution
 Laurent Debacker (https://github.com/debackerl) for bug fixes
 Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
+traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
 
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
@@ -70,22 +71,23 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define VERSION "2.3.1"
+#define VERSION "2.3.2"
 
-// switch STDIN and all normal files into binary mode -- needed for Windows
 #ifdef __MINGW32__
-#include <fcntl.h>
-int _CRT_fmode = _O_BINARY;
-int _fmode = _O_BINARY;
-#endif
+	#include <io.h>
 
-// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
-#ifdef __MINGW32__
-#define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT 0x0502
-#define _WIN32_IE 0x0400
-#include <windows.h>
-#include <commctrl.h>
+	// switch STDIN and all normal files into binary mode -- needed for Windows
+	#include <fcntl.h>
+	//#define _O_U8TEXT 0x40000
+	int _CRT_fmode = _O_BINARY;
+	int _fmode = _O_BINARY;
+	
+	// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
+	#define WIN32_LEAN_AND_MEAN
+	#define _WIN32_WINNT 0x0502
+	#define _WIN32_IE 0x0400
+	#include <windows.h>
+	#include <commctrl.h>
 #endif
 
 typedef enum {
@@ -98,7 +100,7 @@ typedef enum {
 #define TS_PACKET_SIZE 188
 
 // size of a TS packet payload in bytes
-#define TS_PACKET_PAYLOAD_SIZE 184
+#define TS_PACKET_PAYLOAD_SIZE (TS_PACKET_SIZE - 4)
 
 // size of a packet payload buffer
 #define PAYLOAD_BUFFER_SIZE 4096
@@ -275,7 +277,7 @@ uint16_t pmt_ttxt_map_count = 0;
 #define array_length(a) (sizeof(a)/sizeof(a[0]))
 
 // helper, linear searcher far a value
-inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
+static inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
 	bool_t r = NO;
 	for (uint16_t i = 0; i < length; i++)
 		if (array[i] == element) {
@@ -295,7 +297,7 @@ inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
 uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
-		VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; UNHAM8/4(%02x)\n", a);
+		VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM8/4(%02x)\n", a);
 	}
 	return (r & 0x0f);
 }
@@ -351,7 +353,7 @@ void ucs2_to_utf8(char *r, uint16_t ch) {
 // check parity and translate any reasonable teletext character into ucs2
 uint16_t telx_to_ucs2(uint8_t c) {
 	if (PARITY_8[c] == 0) {
-		VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; PARITY(%02x)\n", c);
+		VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; PARITY(%02x)\n", c);
 		return 0x20;
 	}
 
@@ -479,7 +481,7 @@ void process_page(teletext_page_t *page) {
 				}
 
 				if (v >= 0x20) {
-					char u[4] = {0, 0, 0, 0};
+					char u[4] = { 0, 0, 0, 0 };
 					ucs2_to_utf8(u, v);
 					fprintf(stdout, "%s", u);
 				}
@@ -521,7 +523,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 	 	// Page number and control bits
 		uint16_t page_number = (m << 8) | (unham_8_4(packet->data[1]) << 4) | unham_8_4(packet->data[0]);
 		uint8_t charset = ((unham_8_4(packet->data[7]) & 0x08) | (unham_8_4(packet->data[7]) & 0x04) | (unham_8_4(packet->data[7]) & 0x02)) >> 1;
-		uint8_t flag_suppress_header = unham_8_4(packet->data[6]) & 0x01;
+		//uint8_t flag_suppress_header = unham_8_4(packet->data[6]) & 0x01;
 		//uint8_t flag_inhibit_display = (unham_8_4(packet->data[6]) & 0x08) >> 3;
 
 		// ETS 300 706, chapter 9.3.1.3:
@@ -570,10 +572,12 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 
 		// I know -- not needed; in subtitles we will never need disturbing teletext page status bar
 		// displaying tv station name, current time etc.
+		/*
 		if (flag_suppress_header == NO) {
 			for (uint8_t i = 14; i < 40; i++) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
 			//page_buffer.tainted = YES;
 		}
+		*/
 	}
 	else if ((y >= 1) && (y <= 23) && (m == MAGAZINE(config.page)) && (receiving_data == YES)) {
 		// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
@@ -595,7 +599,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		for (uint8_t j = 0; j < 13; j++) {
 			// invalid data (HAM24/18 uncorrectable error detected), skip group
 			if ((decoded[j] & 0x80000000) > 0) {
-				VERBOSE_ONLY fprintf(stderr, "- Unrecoverable data error; UNHAM24/18()=%04x\n", decoded[j]);
+				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", decoded[j]);
 				continue;
 			}
 
@@ -656,7 +660,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			if (unham_8_4(packet->data[0]) < 2) {
 				fprintf(stderr, "- Programme Identification Data = ");
 				for (uint8_t i = 20; i < 40; i++) {
-					char u[4] = {0, 0, 0, 0};
+					char u[4] = { 0, 0, 0, 0 };
 					ucs2_to_utf8(u, telx_to_ucs2(packet->data[i]));
 					fprintf(stderr, "%s", u);
 				}
@@ -683,7 +687,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 				// 4th step: conversion to time_t
 				time_t t0 = (time_t)t;
 				// ctime output itself is \n-ended
-				fprintf(stderr, "- Universal Time Co-ordinated = %s", ctime(&t0));
+				fprintf(stderr, "- Programme Timestamp (UTC) = %s", ctime(&t0));
 
 				VERBOSE_ONLY fprintf(stderr, "- Transmission mode = %s\n", (transmission_mode == TRANSMISSION_MODE_SERIAL ? "serial" : "parallel"));
 
@@ -888,7 +892,7 @@ void signal_handler(int sig) {
 	}
 }
 
-int main(int argc, const char *argv[]) {
+int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
 	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
@@ -947,7 +951,7 @@ int main(int argc, const char *argv[]) {
 			config.utc_refvalue = t;
 		}
 		else {
-			fprintf(stderr, "- Unknown option %s\n", argv[i]);
+			fprintf(stderr, "! Unknown option %s\n", argv[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -990,7 +994,7 @@ int main(int argc, const char *argv[]) {
 
 	// teletext page number out of range
 	if ((config.page != 0) && ((config.page < 100) || (config.page > 899))) {
-		fprintf(stderr, "- Teletext page number could not be lower than 100 or higher than 899\n");
+		fprintf(stderr, "! Teletext page number could not be lower than 100 or higher than 899\n");
 		exit(EXIT_FAILURE);
 	}
 
@@ -1005,12 +1009,17 @@ int main(int argc, const char *argv[]) {
 
 	// 0 = STDIN, the only multiplatform code I could use :-/
 	if (isatty(0)) {
-		fprintf(stderr, "- I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
+		fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
 		exit(EXIT_FAILURE);
 	}
 
 	// full buffering -- disables flushing after CR/FL, we will flush manually whole SRT frames
 	setvbuf(stdout, (char*)NULL, _IOFBF, 0);
+
+// in Windows console is not UTF-8 compliant by default
+#ifdef __MINGW32__
+	_setmode(_fileno(stdout), _O_U8TEXT);
+#endif
 
 	// print UTF-8 BOM chars
 	if (config.bom == YES) {
@@ -1033,6 +1042,22 @@ int main(int argc, const char *argv[]) {
 
 	// reading input
 	while ((exit_request == NO) && (fread(&ts_buffer, 1, TS_PACKET_SIZE, stdin) == TS_PACKET_SIZE)) {
+		// not TS packet -- misaligned?
+		if (ts_buffer[0] != 0x47) {
+			fprintf(stderr, "! Invalid TS packet header; TS seems to be misaligned\n");
+
+			for (uint16_t shift = 1; shift < TS_PACKET_SIZE; shift++) {
+				if (ts_buffer[shift]  == 0x47) {
+					VERBOSE_ONLY fprintf(stderr, "! TS-packet-header-like byte found shifted by %"PRIu16" bytes, aligning TS stream (at least one TS packet lost)\n", shift);
+
+					for (uint16_t i = shift; i < TS_PACKET_SIZE; i++) ts_buffer[i - shift] = ts_buffer[i];
+					fread(&ts_buffer[TS_PACKET_SIZE - shift], 1, shift, stdin);
+					
+					break;
+				}
+			}
+		}
+
 		// Transport Stream Header
 		// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)buffer;)
 		// -- struct packing is platform dependant and not performing well.
@@ -1052,15 +1077,9 @@ int main(int argc, const char *argv[]) {
 			af_discontinuity = (ts_buffer[5] & 0x80) >> 7;
 		}
 
-		// not TS packet?
-		if (header.sync != 0x47) {
-			fprintf(stderr, "- Invalid TS packet header\n- telxcc does not work with unaligned TS.\n\n");
-			exit(EXIT_FAILURE);
-		}
-
 		// uncorrectable error?
 		if (header.transport_error > 0) {
-			VERBOSE_ONLY fprintf(stderr, "- Uncorrectable TS packet error (received CC %1x)\n", header.continuity_counter);
+			VERBOSE_ONLY fprintf(stderr, "! Uncorrectable TS packet error (received CC %1x)\n", header.continuity_counter);
 			continue;
 		}
 
@@ -1130,7 +1149,7 @@ int main(int argc, const char *argv[]) {
 				payload_counter += TS_PACKET_PAYLOAD_SIZE;
 				packet_counter++;
 			}
-			else VERBOSE_ONLY fprintf(stderr, "- packet payload size exceeds payload_buffer size, probably not teletext stream\n");
+			else VERBOSE_ONLY fprintf(stderr, "! Packet payload size exceeds payload_buffer size, probably not teletext stream\n");
 		}
 	}
 
@@ -1154,7 +1173,7 @@ int main(int argc, const char *argv[]) {
 		fprintf(stderr, "\n");
 	}
 
-	if ((frames_produced == 0) && (config.nonempty == YES) && (config.se_mode == NO)) {
+	if ((config.se_mode == NO) && (frames_produced == 0) && (config.nonempty == YES)) {
 		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:10,000\r\n(no closed captions available)\r\n\r\n");
 		fflush(stdout);
 		frames_produced++;
