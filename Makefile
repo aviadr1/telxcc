@@ -1,5 +1,6 @@
 CC = gcc
 CCFLAGS = -m64 -march=core2 -Wall -std=c99 -O3
+LD = ld
 LDFLAGS =
 
 OBJS = telxcc.o
@@ -15,7 +16,7 @@ clean :
 	-rm -f $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
-	$(CC) -o $@ $(OBJS) $(LDFLAGS) 
+	$(CC) $(LDFLAGS) -o $@ $(OBJS) 
 
 %.o : %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<

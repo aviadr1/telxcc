@@ -9,17 +9,19 @@ telxcc is
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
 * modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
-* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiBps, with less than 30 % 1 CPU core utilization, SSD is the bottleneck)
-* well tested (each version and build is automatically tested against English, German, Czech, Norwegian, Swedish and Slovenian TS files)
+* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiBps, with less than 30 % of 1 CPU core utilization, SSD is the bottleneck)
+* well tested (each version is automatically tested against English, German, Czech, Norwegian, Swedish and Slovenian TS files)
 
-## Compiled binaries
+## Compiled binaries and other downloads
 
-* [telxcc v2.3.1 — x86 compiled binaries (Linux, Mac OS X, Windows)](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip)
-* [telxcc v2.3.1 — x86 compiled binaries, GPG signature](https://forers.com/download/telxcc/telxcc-x86-v2.3.1.zip.asc)
+* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc)
+* [telxcc v2.3.2 - Mac OS X, x86](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc)
+* [telxcc v2.3.2 - Linux, x86](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc)
+* [TS sample file 1](https://forers.com/download/telxcc/sample1.ts) (1.4 GiB)
 
 ## Pricing and Support
 
-telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports are very welcome. Unfortunately I am unable to provide you with free support.
+telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports are very welcome. Unfortunately we are unable to provide you with free support.
 
 ## Build
 

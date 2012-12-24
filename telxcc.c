@@ -74,20 +74,18 @@ Werner Brückner -- Teletext in digital television
 #define VERSION "2.3.2"
 
 #ifdef __MINGW32__
-	#include <io.h>
+// switch STDIN and all normal files into binary mode -- needed for Windows
+#include <fcntl.h>
+#include <io.h>
+int _CRT_fmode = _O_BINARY;
+int _fmode = _O_BINARY;
 
-	// switch STDIN and all normal files into binary mode -- needed for Windows
-	#include <fcntl.h>
-	//#define _O_U8TEXT 0x40000
-	int _CRT_fmode = _O_BINARY;
-	int _fmode = _O_BINARY;
-	
-	// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
-	#define WIN32_LEAN_AND_MEAN
-	#define _WIN32_WINNT 0x0502
-	#define _WIN32_IE 0x0400
-	#include <windows.h>
-	#include <commctrl.h>
+// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
+#define WIN32_LEAN_AND_MEAN
+#define _WIN32_WINNT 0x0502
+#define _WIN32_IE 0x0400
+#include <windows.h>
+#include <commctrl.h>
 #endif
 
 typedef enum {
@@ -894,7 +892,7 @@ void signal_handler(int sig) {
 
 int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
-	fprintf(stderr, "(c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.\n");
+	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.\n");
 	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
 	fprintf(stderr, "http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
@@ -971,7 +969,7 @@ int main(const int argc, const char *argv[]) {
 			iccx.dwICC = ICC_STANDARD_CLASSES;
 			InitCommonControlsEx(&iccx);
 
-			MessageBoxW(NULL, L"telxcc is a console application, please run it from command line (cmd.exe), scheduler, another application etc.", L"telxcc", MB_OK | MB_ICONWARNING);
+			MessageBoxW(NULL, L"telxcc is a console application. Please run it from command line (cmd.exe), scheduler or another application.", L"telxcc", MB_OK | MB_ICONWARNING);
 		}
 	}
 #endif
@@ -1016,9 +1014,11 @@ int main(const int argc, const char *argv[]) {
 	// full buffering -- disables flushing after CR/FL, we will flush manually whole SRT frames
 	setvbuf(stdout, (char*)NULL, _IOFBF, 0);
 
-// in Windows console is not UTF-8 compliant by default
 #ifdef __MINGW32__
-	_setmode(_fileno(stdout), _O_U8TEXT);
+	// 1 = STDOUT, the only multiplatform code I could use :-/
+	if (isatty(1)) {
+		fprintf(stderr, "- UTF-8 encoded closed captions printed directly into STDOUT could be corrupted on Windows platform\n");
+	}
 #endif
 
 	// print UTF-8 BOM chars
@@ -1174,7 +1174,7 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	if ((config.se_mode == NO) && (frames_produced == 0) && (config.nonempty == YES)) {
-		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:10,000\r\n(no closed captions available)\r\n\r\n");
+		fprintf(stdout, "1\r\n00:00:00,000 --> 00:00:10,000\r\n.\r\n\r\n");
 		fflush(stdout);
 		frames_produced++;
 	}

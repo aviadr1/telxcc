@@ -20,7 +20,7 @@ FILESUBTYPE 0x0L
 			VALUE "OriginalFilename", "telxcc.exe"
 			VALUE "FileDescription", "telxcc -- TELeteXt Closed Captions decoder"
 			VALUE "CompanyName", "Forers, s. r. o."
-			VALUE "LegalCopyright", "\251 Petr Kutálek, 2011-2012"
+			VALUE "LegalCopyright", "\251 Petr Kutalek, 2011-2012"
 			VALUE "Comments", "Licensed under the GPL. https://github.com/forers/telxcc"
 		}
 	}
