@@ -14,9 +14,9 @@ telxcc is
 
 ## Compiled binaries and other downloads
 
-* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc)
-* [telxcc v2.3.2 - Mac OS X, x86](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc)
-* [telxcc v2.3.2 - Linux, x86](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) [signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc)
+* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc))
+* [telxcc v2.3.2 - Mac OS X, x86](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc))
+* [telxcc v2.3.2 - Linux, x86](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc))
 * [TS sample file 1](https://forers.com/download/telxcc/sample1.ts) (1.4 GiB)
 
 ## Pricing and Support
