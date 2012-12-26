@@ -9,7 +9,7 @@ telxcc is
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
 * modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
-* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiBps, with less than 30 % of 1 CPU core utilization, SSD is the bottleneck)
+* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiB/s, with less than 30 % of 1 CPU core utilization, SSD is the bottleneck)
 * well tested (each version is automatically tested against English, German, Czech, Norwegian, Swedish and Slovenian TS files)
 
 ## Compiled binaries and other downloads
@@ -21,7 +21,7 @@ telxcc is
 
 ## Pricing and Support
 
-telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports are very welcome. Unfortunately we are unable to provide you with free support.
+telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports, or TS sample files are very welcome. Unfortunately we are unable to provide you with free support.
 
 ## Build
 
@@ -51,7 +51,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
+    (c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
     Version 2.3.0 (Built on Sep 12 2012)
@@ -75,7 +75,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc -p 777 < 2012-02-15_1900_WWW_NRK.ts > dagsrevyen.srt ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <petr.kutalek@forers.com>, 2011-2012; Licensed under the GPL.
+    (c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
     Version 2.3.0 (Built on Sep 12 2012)
