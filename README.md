@@ -14,9 +14,9 @@ telxcc is
 
 ## Compiled binaries and other downloads
 
-* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc))
-* [telxcc v2.3.2 - Mac OS X, x86](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc))
-* [telxcc v2.3.2 - Linux, x86](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc))
+* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/bc05a36a380732ad9dd6af5bb90cc7b5177d705cd2f157043209a018d551d9c9/analysis/1356474551/))
+* [telxcc v2.3.2 - Mac OS X, x86_64](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/342043631e46e17fb2c5cc9d77372af9e673e88299f012170e4ab8ff51be7fb2/analysis/1356474737/))
+* [telxcc v2.3.2 - Linux, x86_64](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/3f8c137e58678b9a4e3984ad05200e3d6525bd41508ff3338b2f7922aa3c918f/analysis/1356474834/))
 * [TS sample file 1](https://forers.com/download/telxcc/sample1.ts) (1.4 GiB)
 
 ## Pricing and Support
