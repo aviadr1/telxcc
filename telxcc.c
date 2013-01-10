@@ -1,5 +1,5 @@
 /*!
-(c) 2011-2012 Petr Kutalek, Forers, s. r. o.: telxcc
+(c) 2011-2013 Petr Kutalek, Forers, s. r. o.: telxcc
 
 Some portions/inspirations:
 (c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
@@ -71,7 +71,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define VERSION "2.3.2"
+#define VERSION "2.3.3"
 
 #ifdef __MINGW32__
 // switch STDIN and all normal files into binary mode -- needed for Windows
@@ -104,56 +104,56 @@ typedef enum {
 #define PAYLOAD_BUFFER_SIZE 4096
 
 typedef struct {
-	uint8_t sync : 8;
-	uint8_t transport_error : 1;
-	uint8_t payload_unit_start : 1;
-	uint8_t transport_priority : 1;
-	uint16_t pid : 13;
-	uint8_t scrambling_control : 2;
-	uint8_t adaptation_field_exists : 2;
-	uint8_t continuity_counter : 4;
+	uint8_t sync;
+	uint8_t transport_error;
+	uint8_t payload_unit_start;
+	uint8_t transport_priority;
+	uint16_t pid;
+	uint8_t scrambling_control;
+	uint8_t adaptation_field_exists;
+	uint8_t continuity_counter;
 } ts_packet_t;
 
 typedef struct {
-	uint16_t program_num : 16;
-	uint16_t program_pid : 13;
+	uint16_t program_num;
+	uint16_t program_pid;
 } pat_section_t;
 
 typedef struct {
-	uint8_t pointer_field : 8;
-	uint8_t table_id : 8; // 0x00
-	uint16_t section_length : 10;
-	uint8_t current_next_indicator : 1;
+	uint8_t pointer_field;
+	uint8_t table_id; // 0x00
+	uint16_t section_length;
+	uint8_t current_next_indicator;
 } pat_t;
 
 typedef struct {
-	uint8_t stream_type : 8;
-	uint16_t elementary_pid : 13;
-	uint16_t es_info_length : 10;
+	uint8_t stream_type;
+	uint16_t elementary_pid;
+	uint16_t es_info_length;
 } pmt_program_descriptor_t;
 
 /*
 typedef struct {
-	uint8_t descriptor_tag : 8;
-	uint8_t descriptor_length : 8;
+	uint8_t descriptor_tag;
+	uint8_t descriptor_length;
 } pmt_teletext_descriptor_t;
 
 typedef struct {
-	uint32_t iso_639_language_code : 24;
-	uint8_t teletext_type : 5;
-	uint8_t teletext_magazine_number : 4;
-	uint8_t teletext_page_number : 8;
+	uint32_t iso_639_language_code;
+	uint8_t teletext_type;
+	uint8_t teletext_magazine_number;
+	uint8_t teletext_page_number;
 } pmt_teletext_descriptor_payload_t;
 */
 
 typedef struct {
-	uint8_t pointer_field : 8;
-	uint8_t table_id : 8; // 0x02
-	uint16_t section_length : 10;
-	uint16_t program_num : 16;
-	uint8_t current_next_indicator : 1;
-	uint16_t pcr_pid : 16;
-	uint16_t program_info_length : 10;
+	uint8_t pointer_field;
+	uint8_t table_id; // 0x02
+	uint16_t section_length;
+	uint16_t program_num;
+	uint8_t current_next_indicator;
+	uint16_t pcr_pid;
+	uint16_t program_info_length;
 } pmt_t;
 
 /*
@@ -190,8 +190,8 @@ const char* TTXT_COLOURS[8] = {
 #pragma pack(push)
 #pragma pack(1)
 typedef struct {
-	uint8_t : 8; // clock run in
-	uint8_t : 8; // framing code, not needed, ETSI 300 706: const 0xe4
+	uint8_t _clock_in; // clock run in
+	uint8_t _framing_code; // framing code, not needed, ETSI 300 706: const 0xe4
 	uint8_t address[2];
 	uint8_t data[40];
 } teletext_packet_payload_t;
@@ -201,19 +201,19 @@ typedef struct {
 	uint64_t show_timestamp; // show at timestamp (in ms)
 	uint64_t hide_timestamp; // hide at timestamp (in ms)
 	uint16_t text[25][40]; // 25 lines x 40 cols (1 screen/page) of wide chars
-	uint8_t tainted : 1; // 1 = text variable contains any data
+	uint8_t tainted; // 1 = text variable contains any data
 } teletext_page_t;
 
 // application config global variable
 struct {
-	uint8_t verbose : 1; // should telxcc be verbose?
+	uint8_t verbose; // should telxcc be verbose?
 	uint16_t page; // teletext page containing cc we want to filter
 	uint16_t tid; // 13-bit packet ID for teletext stream
 	double offset; // time offset in seconds
-	uint8_t colours : 1; // output <font...></font> tags?
-	uint8_t bom : 1; // print UTF-8 BOM characters at the beginning of output
-	uint8_t nonempty : 1; // produce at least one (dummy) frame
-	uint8_t se_mode : 1; // search engine compatible mode
+	uint8_t colours; // output <font...></font> tags?
+	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
+	uint8_t nonempty; // produce at least one (dummy) frame
+	uint8_t se_mode; // search engine compatible mode
 	uint64_t utc_refvalue; // UTC referential value
 } config = { 0 };
 
@@ -222,10 +222,10 @@ struct {
 
 // application states -- flags for notices that should be printed only once
 struct {
-	uint8_t x28_not_implemented_notified : 1;
-	uint8_t m29_not_implemented_notified : 1;
-	uint8_t programme_info_processed : 1;
-	uint8_t pts_initialized : 1;
+	uint8_t x28_not_implemented_notified;
+	uint8_t m29_not_implemented_notified;
+	uint8_t programme_info_processed;
+	uint8_t pts_initialized;
 } states = { 0 };
 
 // SRT frames produced
@@ -892,7 +892,7 @@ void signal_handler(int sig) {
 
 int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
-	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.\n");
+	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
 	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
 	fprintf(stderr, "http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
@@ -949,7 +949,7 @@ int main(const int argc, const char *argv[]) {
 			config.utc_refvalue = t;
 		}
 		else {
-			fprintf(stderr, "! Unknown option %s\n", argv[i]);
+			fprintf(stderr, "! Unknown option %s\n\n", argv[i]);
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -979,7 +979,7 @@ int main(const int argc, const char *argv[]) {
 	{
 		const uint32_t ENDIANNESS_TEST = 1;
 		if (*(const uint8_t *)&ENDIANNESS_TEST != 1) {
-			fprintf(stderr, "- This application was tested only at Little Endian systems!\n");
+			fprintf(stderr, "- This application was tested only at Little Endian systems!\n\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -992,7 +992,7 @@ int main(const int argc, const char *argv[]) {
 
 	// teletext page number out of range
 	if ((config.page != 0) && ((config.page < 100) || (config.page > 899))) {
-		fprintf(stderr, "! Teletext page number could not be lower than 100 or higher than 899\n");
+		fprintf(stderr, "! Teletext page number could not be lower than 100 or higher than 899\n\n");
 		exit(EXIT_FAILURE);
 	}
 
