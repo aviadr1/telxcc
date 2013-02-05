@@ -10,13 +10,14 @@ telxcc is
 * modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
 * high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiB/s, with less than 30 % of 1 CPU core utilization, SSD is the bottleneck)
-* well tested (each version is automatically tested against English, German, Czech, Norwegian, Swedish and Slovenian TS files)
+* well tested (each version is automatically tested against English, German, Czech, Italian, Norwegian, Swedish, Finnish and Slovenian TS files)
 
 ## Compiled binaries and other downloads
 
-* [telxcc v2.3.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/bc05a36a380732ad9dd6af5bb90cc7b5177d705cd2f157043209a018d551d9c9/analysis/1356474551/))
-* [telxcc v2.3.2 - Mac OS X, x86_64](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/342043631e46e17fb2c5cc9d77372af9e673e88299f012170e4ab8ff51be7fb2/analysis/1356474737/))
-* [telxcc v2.3.2 - Linux, x86_64](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.3.2.zip.asc), [no viruses](https://www.virustotal.com/file/3f8c137e58678b9a4e3984ad05200e3d6525bd41508ff3338b2f7922aa3c918f/analysis/1356474834/))
+* [telxcc v2.4.0 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.0.zip.asc))
+* [telxcc v2.4.0 - Mac OS X, x86_64](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.0.zip.asc))
+* [telxcc v2.4.0 - Linux, x86_64](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.0.zip.asc))
+* [telxcc v2.4.0 - Linux, Raspberry Pi](https://forers.com/download/telxcc/telxcc-linux-rpi-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.0.zip.asc))
 * [TS sample file 1](https://forers.com/download/telxcc/sample1.ts) (1.4 GiB)
 
 ## Pricing and Support
@@ -39,7 +40,7 @@ You can also copy any \*.ts files into the current directory and build a profile
 
 Or you can disable all optimizations (binary target is any x86 processor):
 
-    $ make CCFLAGS="-Wall -std=c99"
+    $ make CCFLAGS="-Wall -pedantic -std=c99"
 
 Windows binary is build in MinGW by:
 
@@ -51,10 +52,10 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.
+    (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.3.0 (Built on Sep 12 2012)
+    Version 2.4.0 (Built on Feb  5 2013)
     
     Usage: ./telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-s [REF]]
       STDIN       transport stream
@@ -63,6 +64,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -v          be verbose
       -p PAGE     teletext page number carrying closed captions
       -t TID      transport stream PID of teletext data sub-stream
+                  if the value of 8192 is specified, the first suitable stream will be used
       -o OFFSET   subtitles offset in seconds
       -n          do not print UTF-8 BOM characters to the file
       -1          produce at least one (dummy) frame
@@ -71,23 +73,21 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
                   if REF (unix timestamp) is ommited, use current system time,
                   telxcc will automatically switch to transport stream UTC timestamps when available
     
+    
 ## Usage example
 
-    $ ./telxcc -p 777 < 2012-02-15_1900_WWW_NRK.ts > dagsrevyen.srt ↵
+    $ ./telxcc < SWR_PID-804_PAGE-150.ts > SWR.srt ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <info@forers.com>, 2011-2012; Licensed under the GPL.
+    (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.3.0 (Built on Sep 12 2012)
-
-    - No teletext PID specified, first received suitable stream PID is 576 (0x240), not guaranteed
-    - PID 0xbd PTS available
-    - Programme Identification Data = NRK TV
-    - Universal Time Co-ordinated = Wed Feb 15 19:14:04 2012
-    - Transmission mode = serial
-    - G0 Charset translation table remapped to G0 Latin National Subset ID 2
-    - There were some CC data carried via pages: 333 444 777
-    - Done (562995 teletext packets processed, 629 SRT frames written)
-
+    Version 2.4.0 (Built on Feb  5 2013)
+    
+    - Found VBI/teletext stream ID 804 (0x324) for SID 28113 (0x6dd1)
+    - No teletext page specified, first received suitable page is 150, not guaranteed
+    - Programme Identification Data = SWR                 
+    - Programme Timestamp (UTC) = Thu Jan 19 21:42:43 2012
+    - Done (29896 teletext packets processed, 42 frames produced)
+    
     $ _
 

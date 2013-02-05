@@ -34,6 +34,7 @@ Professor Francis F Steen and his team from UCLA for contribution
 Laurent Debacker (https://github.com/debackerl) for bug fixes
 Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
 traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
+Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
 
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
@@ -71,7 +72,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define VERSION "2.3.3"
+#define TELXCC_VERSION "2.4.0"
 
 #ifdef __MINGW32__
 // switch STDIN and all normal files into binary mode -- needed for Windows
@@ -89,9 +90,9 @@ int _fmode = _O_BINARY;
 #endif
 
 typedef enum {
-	YES = 1,
-	NO = 0,
-	UNDEF = 255
+	NO = 0x00,
+	YES = 0x01,
+	UNDEF = 0xff
 } bool_t;
 
 // size of a TS packet in bytes
@@ -121,7 +122,7 @@ typedef struct {
 
 typedef struct {
 	uint8_t pointer_field;
-	uint8_t table_id; // 0x00
+	uint8_t table_id;
 	uint16_t section_length;
 	uint8_t current_next_indicator;
 } pat_t;
@@ -132,40 +133,15 @@ typedef struct {
 	uint16_t es_info_length;
 } pmt_program_descriptor_t;
 
-/*
-typedef struct {
-	uint8_t descriptor_tag;
-	uint8_t descriptor_length;
-} pmt_teletext_descriptor_t;
-
-typedef struct {
-	uint32_t iso_639_language_code;
-	uint8_t teletext_type;
-	uint8_t teletext_magazine_number;
-	uint8_t teletext_page_number;
-} pmt_teletext_descriptor_payload_t;
-*/
-
 typedef struct {
 	uint8_t pointer_field;
-	uint8_t table_id; // 0x02
+	uint8_t table_id;
 	uint16_t section_length;
 	uint16_t program_num;
 	uint8_t current_next_indicator;
 	uint16_t pcr_pid;
 	uint16_t program_info_length;
 } pmt_t;
-
-/*
-typedef enum {
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_RESERVED = 0,
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_INITIAL = 1,
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_SUBTITLE = 2,
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_ADDITIONAL_INFO = 3,
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_PROGRAM_SCHEDULE = 4,
-	TELETEXT_DESCRIPTOR_TELETEXT_TYPE_SUBTITILE_CC = 5
-} teletext_descriptor_teletext_type_t;
-*/
 
 typedef enum {
 	DATA_UNIT_EBU_TELETEXT_NONSUBTITLE = 0x02,
@@ -210,7 +186,7 @@ struct {
 	uint16_t page; // teletext page containing cc we want to filter
 	uint16_t tid; // 13-bit packet ID for teletext stream
 	double offset; // time offset in seconds
-	uint8_t colours; // output <font...></font> tags?
+	uint8_t colours; // output <font...></font> tags
 	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
 	uint8_t nonempty; // produce at least one (dummy) frame
 	uint8_t se_mode; // search engine compatible mode
@@ -249,7 +225,7 @@ transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 // flag indicating if incoming data should be processed or ignored
 uint8_t receiving_data = NO;
 
-// current charset (charset can be -- an very often is -- changed during transmission)
+// current charset (charset can be -- and very often is -- changed during transmission)
 uint8_t current_charset = 0;
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
@@ -272,23 +248,25 @@ uint16_t pmt_map_count = 0;
 uint16_t pmt_ttxt_map[TS_PMT_MAP_SIZE] = { 0 };
 uint16_t pmt_ttxt_map_count = 0;
 
+// helper, array length function
 #define array_length(a) (sizeof(a)/sizeof(a[0]))
 
-// helper, linear searcher far a value
+// helper, linear searcher for a value
 static inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element) {
 	bool_t r = NO;
-	for (uint16_t i = 0; i < length; i++)
+	for (uint16_t i = 0; i < length; i++) {
 		if (array[i] == element) {
 			r = YES;
 			break;
 		}
+	}
 	return r;
 }
 
-// extracts magazine No from teletext page
+// extracts magazine number from teletext page
 #define MAGAZINE(p) ((p >> 8) & 0xf)
 
-// extracts page No from teletext page
+// extracts page number from teletext page
 #define PAGE(p) (p & 0xff)
 
 // ETS 300 706, chapter 8.2
@@ -332,20 +310,18 @@ void ucs2_to_utf8(char *r, uint16_t ch) {
 		r[0] = ch & 0x7f;
 		r[1] = 0;
 		r[2] = 0;
-		r[3] = 0;
 	}
 	else if (ch < 0x800) {
 		r[0] = (ch >> 6) | 0xc0;
 		r[1] = (ch & 0x3f) | 0x80;
 		r[2] = 0;
-		r[3] = 0;
 	}
 	else {
 		r[0] = (ch >> 12) | 0xe0;
 		r[1] = ((ch >> 6) & 0x3f) | 0x80;
 		r[2] = (ch & 0x3f) | 0x80;
-		r[3] = 0;
 	}
+	r[3] = 0;
 }
 
 // check parity and translate any reasonable teletext character into ucs2
@@ -363,7 +339,7 @@ uint16_t telx_to_ucs2(uint8_t c) {
 void process_page(teletext_page_t *page) {
 #ifdef DEBUG
 	for (uint8_t row = 1; row < 25; row++) {
-		fprintf(stdout, "DEBUG[%02u]: ", row);
+		fprintf(stdout, "# DEBUG[%02u]: ", row);
 		for (uint8_t col = 0; col < 40; col++) fprintf(stdout, "%3x ", page->text[row][col]);
 		fprintf(stdout, "\n");
 	}
@@ -372,12 +348,14 @@ void process_page(teletext_page_t *page) {
 
 	// optimization: slicing column by column -- higher probability we could find boxed area start mark sooner
 	uint8_t page_is_empty = YES;
-	for (uint8_t col = 0; col < 40; col++)
-		for (uint8_t row = 1; row < 25; row++)
+	for (uint8_t col = 0; col < 40; col++) {
+		for (uint8_t row = 1; row < 25; row++) {
 			if (page->text[row][col] == 0x0b) {
 				page_is_empty = NO;
 				goto page_is_empty;
 			}
+		}
+	}
 	page_is_empty:
 	if (page_is_empty == YES) return;
 
@@ -405,11 +383,12 @@ void process_page(teletext_page_t *page) {
 		uint8_t col_start = 40;
 		uint8_t col_stop = 40;
 
-		for (int8_t col = 39; col >= 0; col--)
+		for (int8_t col = 39; col >= 0; col--) {
 			if (page->text[row][col] == 0xb) {
 				col_start = col;
 				break;
 			}
+		}
 		// line is empty
 		if (col_start > 39) continue;
 
@@ -468,13 +447,14 @@ void process_page(teletext_page_t *page) {
 				if (v >= 0x20) {
 					// translate some chars into entities, if in colour mode
 					if (config.colours == YES) {
-						for (uint8_t i = 0; i < array_length(ENTITIES); i++)
+						for (uint8_t i = 0; i < array_length(ENTITIES); i++) {
 							if (v == ENTITIES[i].character) {
 								fprintf(stdout, "%s", ENTITIES[i].entity);
 								// v < 0x20 won't be printed in next block
 								v = 0;
 								break;
 							}
+						}
 					}
 				}
 
@@ -732,6 +712,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 		optional_pes_header_length = buffer[8];
 	}
 
+	// should we use PTS or PCR?
 	static uint8_t using_pts = UNDEF;
 	if (using_pts == UNDEF) {
 		if ((optional_pes_header_included == YES) && ((buffer[7] & 0x80) > 0)) {
@@ -761,17 +742,32 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 		t = pts / 90;
 	}
 
+
+
+
+// ----------------------------------------------------------------------------
+
+
 	static int64_t delta = 0;
 	static uint32_t t0 = 0;
 	if (states.pts_initialized == NO) {
 		delta = 1000 * config.offset + 1000 * config.utc_refvalue - t;
-		t0 = t;
+		//t0 = t;
 		states.pts_initialized = YES;
 	}
-	// TODO: How the hell have I calculated this constant?!! It's correct, however I have no idea why. :-D
-	if (t < t0) delta += 95443718;
-	t0 = t;
+	//if (t < t0) delta += 95443718;
 	last_timestamp = t + delta;
+
+	//fprintf(stderr, "%f, %f, %lli, %llu\n", t/1000.0, t0/1000.0, delta, last_timestamp);
+
+	t0 = t;
+
+
+// ----------------------------------------------------------------------------
+
+
+
+
 
 	// skip optional PES header and process each 46-byte teletext packet
 	uint16_t i = 7;
@@ -823,7 +819,7 @@ if (pat.pointer_field > 0) {
 					if (pmt_map_count < TS_PMT_MAP_SIZE) {
 						pmt_map[pmt_map_count++] = section.program_pid;
 #ifdef DEBUG
-						fprintf(stderr, "- Found PMT for SID %"PRIu16" (0x%x)\n", section.program_num, section.program_num);
+						fprintf(stderr, "# Found PMT for SID %"PRIu16" (0x%x)\n", section.program_num, section.program_num);
 #endif
 					}
 				}
@@ -863,7 +859,7 @@ if (pmt.pointer_field > 0) {
 				desc.es_info_length = ((buffer[i + 3] & 0x03) << 8) | buffer[i + 4];
 
 				uint8_t descriptor_tag = buffer[i + 5];
-				// descriptor_tag: 0x45 = VBI_data_descriptor, 0x46 = VBI_teletext_descriptor, 0x56 = teletext_descriptor
+ 				// descriptor_tag: 0x45 = VBI_data_descriptor, 0x46 = VBI_teletext_descriptor, 0x56 = teletext_descriptor
 				if ((desc.stream_type == 0x06) && ((descriptor_tag == 0x45) || (descriptor_tag == 0x46) || (descriptor_tag == 0x56))) {
 					if (in_array(pmt_ttxt_map, pmt_ttxt_map_count, desc.elementary_pid) == NO) {
 						if (pmt_ttxt_map_count < TS_PMT_TTXT_MAP_SIZE) {
@@ -895,7 +891,7 @@ int main(const int argc, const char *argv[]) {
 	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
 	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
 	fprintf(stderr, "http://fore.rs/donate/telxcc\n");
-	fprintf(stderr, "Version %s (Built on %s)\n", VERSION, __DATE__);
+	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
 	// by default output UTF-8 BOM to redirect stdout only, Windows does not like those chars in console
@@ -911,6 +907,7 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "  -v          be verbose\n");
 			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions\n");
 			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream\n");
+			fprintf(stderr, "              if the value of 8192 is specified, the first suitable stream will be used\n");
 			fprintf(stderr, "  -o OFFSET   subtitles offset in seconds\n");
 			fprintf(stderr, "  -n          do not print UTF-8 BOM characters to the file\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
@@ -918,6 +915,8 @@ int main(const int argc, const char *argv[]) {
 			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
 			fprintf(stderr, "              if REF (unix timestamp) is ommited, use current system time,\n");
 			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
+			fprintf(stderr, "\n");
+			fprintf(stderr, "Note: Srdecne pozdravy z Prahy!\n");
 			fprintf(stderr, "\n");
 			exit(EXIT_SUCCESS);
 		}
@@ -974,17 +973,6 @@ int main(const int argc, const char *argv[]) {
 	}
 #endif
 
-/*
-	// endianness test; maybe not needed, however I do not have any Big Endian system so I can be sure... :-/
-	{
-		const uint32_t ENDIANNESS_TEST = 1;
-		if (*(const uint8_t *)&ENDIANNESS_TEST != 1) {
-			fprintf(stderr, "- This application was tested only at Little Endian systems!\n\n");
-			exit(EXIT_FAILURE);
-		}
-	}
-*/
-
 	if (config.se_mode == YES) {
 		time_t t0 = (time_t)config.utc_refvalue;
 		fprintf(stderr, "- Search engine mode active, UTC referential value = %s", ctime(&t0));
@@ -1002,6 +990,12 @@ int main(const int argc, const char *argv[]) {
 		config.page = ((config.page / 100) << 8) | (((config.page / 10) % 10) << 4) | (config.page % 10);
 	}
 
+	// PID out of range
+	if (config.tid > 0x2000) {
+		fprintf(stderr, "! Transport stream PID could not be higher than 8192\n\n");
+		exit(EXIT_FAILURE);
+	}
+
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
@@ -1017,7 +1011,7 @@ int main(const int argc, const char *argv[]) {
 #ifdef __MINGW32__
 	// 1 = STDOUT, the only multiplatform code I could use :-/
 	if (isatty(1)) {
-		fprintf(stderr, "- UTF-8 encoded closed captions printed directly into STDOUT could be corrupted on Windows platform\n");
+		fprintf(stderr, "! UTF-8 encoded closed captions printed directly into STDOUT could be corrupted on Windows platform\n");
 	}
 #endif
 
@@ -1052,7 +1046,7 @@ int main(const int argc, const char *argv[]) {
 
 					for (uint16_t i = shift; i < TS_PACKET_SIZE; i++) ts_buffer[i - shift] = ts_buffer[i];
 					fread(&ts_buffer[TS_PACKET_SIZE - shift], 1, shift, stdin);
-					
+
 					break;
 				}
 			}
@@ -1088,8 +1082,8 @@ int main(const int argc, const char *argv[]) {
 			// PCR in adaptation field
 			uint8_t af_pcr_exists = (ts_buffer[5] & 0x10) >> 4;
 			if (af_pcr_exists > 0) {
-				uint64_t pts = 0;
-				pts |= (ts_buffer[6] << 25);
+				uint64_t pts = ts_buffer[6];
+				pts <<= 25;
 				pts |= (ts_buffer[7] << 17);
 				pts |= (ts_buffer[8] << 9);
 				pts |= (ts_buffer[9] << 1);
@@ -1116,6 +1110,21 @@ int main(const int argc, const char *argv[]) {
 			if (in_array(pmt_map, pmt_map_count, header.pid) == YES) {
 				analyze_pmt(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
+			}
+		}
+
+		// TID 0x2000 specified => dummy autodetection
+		if (config.tid == 0x2000) {
+			if (header.payload_unit_start > 0) {
+				// searching for PES header and "Private Stream 1" stream_id
+				uint64_t pes_prefix = (ts_buffer[4] << 16) | (ts_buffer[5] << 8) | ts_buffer[6];
+				uint8_t pes_stream_id = ts_buffer[7];
+
+				if ((pes_prefix == 0x000001) && (pes_stream_id == 0xbd)) {
+					config.tid = header.pid;
+					fprintf(stderr, "- No teletext PID specified, first received suitable stream PID is %"PRIu16" (0x%x), not guaranteed\n", config.tid, config.tid);
+					continue;
+				}
 			}
 		}
 
@@ -1161,15 +1170,16 @@ int main(const int argc, const char *argv[]) {
 	}
 
 	VERBOSE_ONLY {
-		if (config.tid == 0) fprintf(stderr, "- No teletext PID specified, no suitable PID found in PAT/PMT tables. Please specify teletext PID via -t parameter.\n");
+		if (config.tid == 0) fprintf(stderr, "- No teletext PID specified, no suitable PID found in PAT/PMT tables. Please specify teletext PID via -t parameter.\n  You can also specify -t 8192 for another type of autodetection (choosing the first suitable stream)\n");
 		if (frames_produced == 0) fprintf(stderr, "- No frames produced. CC teletext page number was probably wrong.\n");
 		fprintf(stderr, "- There were some CC data carried via pages = ");
 		// We ignore i = 0xff, because 0xffs are teletext ending frames
-		for (uint16_t i = 0; i < 255; i++)
+		for (uint16_t i = 0; i < 255; i++) {
 			for (uint8_t j = 0; j < 8; j++) {
 				uint8_t v = cc_map[i] & (1 << j);
 				if (v > 0) fprintf(stderr, "%03x ", ((j + 1) << 8) | i);
 			}
+		}
 		fprintf(stderr, "\n");
 	}
 

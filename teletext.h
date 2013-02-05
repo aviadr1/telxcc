@@ -55,50 +55,6 @@ typedef enum {
 	HEBREW
 } g0_charsets_t;
 
-/*
-struct {
-	uint8_t id;
-	g0_charsets_t charset;
-	const char *name;
-} const LANGUAGES[] = {
-	{ 0x00, LATIN,     "English" },
-	{ 0x01, LATIN,     "French" },
-	{ 0x02, LATIN,     "Swedish/Finnish/Hungarian" },
-	{ 0x03, LATIN,     "Czech/Slovak" },
-	{ 0x04, LATIN,     "German" },
-	{ 0x05, LATIN,     "Portuguese/Spanish" },
-	{ 0x06, LATIN,     "Italian" },
-	{ 0x08, LATIN,     "Polish" },
-	{ 0x09, LATIN,     "French" },
-	{ 0x0a, LATIN,     "Swedish/Finnish/Hungarian" },
-	{ 0x0b, LATIN,     "Czech/Slovak" },
-	{ 0x0c, LATIN,     "German" },
-	{ 0x0e, LATIN,     "Italian" },
-	{ 0x10, LATIN,     "English" },
-	{ 0x11, LATIN,     "French" },
-	{ 0x12, LATIN,     "Swedish/Finnish/Hungarian" },
-	{ 0x13, LATIN,     "Turkish" },
-	{ 0x14, LATIN,     "German" },
-	{ 0x15, LATIN,     "Portuguese/Spanish" },
-	{ 0x16, LATIN,     "Italian" },
-	{ 0x1d, LATIN,     "Serbian/Croatian/Slovenian (Latin)" },
-	{ 0x20, CYRILLIC1, "Serbian/Croatian (Cyrillic)" },
-	{ 0x21, CYRILLIC2, "Russian, Bulgarian" },
-	{ 0x22, LATIN,     "Estonian" },
-	{ 0x23, LATIN,     "Czech/Slovak" },
-	{ 0x24, LATIN,     "German" },
-	{ 0x25, CYRILLIC3, "Ukrainian" },
-	{ 0x26, LATIN,     "Lettish/Lithuanian" },
-	{ 0x33, LATIN,     "Turkish" },
-	{ 0x37, GREEK,     "Greek" },
-	{ 0x40, LATIN,     "English" },
-	{ 0x41, LATIN,     "French" },
-	{ 0x47, ARABIC,    "Arabic" },
-	{ 0x55, HEBREW,    "Hebrew" },
-	{ 0x57, ARABIC,    "Arabic" }
-};
-*/
-
 // G0 charsets
 uint16_t G0[5][96] = {
 	{ // Latin G0 Primary Set
