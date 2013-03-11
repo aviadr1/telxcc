@@ -16,7 +16,7 @@ clean :
 	-rm -f $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS) 
+	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 %.o : %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
@@ -30,3 +30,8 @@ profiled :
 	make clean
 	make CCFLAGS="$(CCFLAGS) -fprofile-use" LDFLAGS="$(LDFLAGS) -fprofile-use" $(EXEC)
 	-rm -f $(OBJS) *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock
+
+man : telxcc.1.gz
+
+%.1.gz : %.1
+	gzip -c -9 $< > $@

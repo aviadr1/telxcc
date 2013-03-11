@@ -15,10 +15,15 @@ clean :
 	-del $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
-	$(CC) -o $@ $(OBJS) $(LDFLAGS) 
+	$(CC) -o $@ $(OBJS) $(LDFLAGS)
 
 %.o : %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
 
 %.res : %.rc
-	windres -J rc -O coff -o $@ $< 
+	windres -J rc -O coff -o $@ $<
+
+man : telxcc.1.gz
+
+%.1.gz : %.1
+	gzip -c -9 $< > $@
