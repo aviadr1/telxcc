@@ -2,7 +2,7 @@
 (c) 2011-2013 Petr Kutalek, Forers, s. r. o.: telxcc
 
 Some portions/inspirations:
-(c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
+(c) 2007 Vincent Penne, telx.c: Minimalistic Teletext subtitles decoder
 (c) 2001-2005 by dvb.matt, ProjectX java dvb decoder
 (c) Dave Chapman <dave@dchapman.com> 2003-2004, dvbtextsubs
 (c) Ralph Metzler, DVB driver, vbidecode
