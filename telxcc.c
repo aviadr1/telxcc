@@ -2,7 +2,7 @@
 (c) 2011-2013 Petr Kutalek, Forers, s. r. o.: telxcc
 
 Some portions/inspirations:
-(c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
+(c) 2007 Vincent Penne, telx.c: Minimalistic Teletext subtitles decoder
 (c) 2001-2005 by dvb.matt, ProjectX java dvb decoder
 (c) Dave Chapman <dave@dchapman.com> 2003-2004, dvbtextsubs
 (c) Ralph Metzler, DVB driver, vbidecode
@@ -35,6 +35,7 @@ Laurent Debacker (https://github.com/debackerl) for bug fixes
 Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
 traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
 Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
+Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS sample and assistance with Polish language
 
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
@@ -203,11 +204,9 @@ FILE *fout = NULL;
 
 // application states -- flags for notices that should be printed only once
 struct {
-	uint8_t x28_not_implemented_notified;
-	uint8_t m29_not_implemented_notified;
 	uint8_t programme_info_processed;
 	uint8_t pts_initialized;
-} states = { NO, NO, NO, NO };
+} states = { NO, NO };
 
 // SRT frames produced
 uint32_t frames_produced = 0;
@@ -230,8 +229,16 @@ transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 // flag indicating if incoming data should be processed or ignored
 uint8_t receiving_data = NO;
 
-// current charset (charset can be -- and very often is -- changed during transmission)
-uint8_t current_charset = 0;
+// current charset (charset can be -- and always is -- changed during transmission)
+typedef struct {
+	uint8_t default0;
+	uint8_t current;
+	uint8_t g0_m29;
+	uint8_t g0_x28;
+} charset_t;
+charset_t primary_charset = {
+	0x00, 0x00, UNDEF, UNDEF
+};
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
 struct {
@@ -298,6 +305,20 @@ uint32_t unham_24_18(uint32_t a) {
 	uint32_t r = d ^ UNHAM_24_18_ERR[ABCDEF];
 
 	return r;
+}
+
+void remap_g0_charset(uint8_t c) {
+	if (c != primary_charset.current) {
+		uint8_t m = G0_LATIN_NATIONAL_SUBSETS_MAP[c];
+		if (m == 0xff) {
+			fprintf(stderr, "- G0 Latin National Subset ID %1x/%1x is not implemented, ignoring\n", (c >> 3), (c & 0x7));
+		}
+		else {
+			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSETS_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[m][j];
+			VERBOSE_ONLY fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x/%1x\n", (c >> 3), (c & 0x7));
+			primary_charset.current = c;
+		}
+	}
 }
 
 void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
@@ -491,6 +512,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 	uint8_t m = address & 0x7;
 	if (m == 0) m = 8;
 	uint8_t y = (address >> 3) & 0x1f;
+	uint8_t designation_code = (y > 25) ? unham_8_4(packet->data[0]) : 0x00;
 
 	if (y == 0) {
 		// CC map
@@ -545,13 +567,12 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		memset(page_buffer.text, 0x00, sizeof(page_buffer.text));
 		page_buffer.tainted = NO;
 		receiving_data = YES;
+		primary_charset.g0_x28 = UNDEF;
 
-		// remap current Latin G0 chars
-		if (charset != current_charset) {
-			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSET_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[charset][j];
-			current_charset = charset;
-			VERBOSE_ONLY fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x\n", current_charset);
-		}
+		uint8_t c = primary_charset.default0;
+		if (primary_charset.g0_m29 != UNDEF) c = primary_charset.g0_m29;
+		c = (c & 0x78) | charset;
+		remap_g0_charset(c);
 
 		/*
 		// I know -- not needed; in subtitles we will never need disturbing teletext page status bar
@@ -562,7 +583,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		}
 		*/
 	}
-	else if ((y >= 1) && (y <= 23) && (m == MAGAZINE(config.page)) && (receiving_data == YES)) {
+	else if ((m == MAGAZINE(config.page)) && (y >= 1) && (y <= 23) && (receiving_data == YES)) {
 		// ETS 300 706, chapter 9.4.1: Packets X/26 at presentation Levels 1.5, 2.5, 3.5 are used for addressing
 		// a character location and overwriting the existing character defined on the Level 1 page
 		// ETS 300 706, annex B.2.2: Packets with Y = 26 shall be transmitted before any packets with Y = 1 to Y = 25;
@@ -571,25 +592,26 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		for (uint8_t i = 0; i < 40; i++) if (page_buffer.text[y][i] == 0x00) page_buffer.text[y][i] = telx_to_ucs2(packet->data[i]);
 		page_buffer.tainted = YES;
 	}
-	else if ((y == 26) && (m == MAGAZINE(config.page)) && (receiving_data == YES)) {
+	else if ((m == MAGAZINE(config.page)) && (y == 26) && (receiving_data == YES)) {
 		// ETS 300 706, chapter 12.3.2 (X/26 definition)
 		uint8_t x26_row = 0;
 		uint8_t x26_col = 0;
 
-		uint32_t decoded[13] = { 0 };
-		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) decoded[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+		uint32_t triplets[13] = { 0 };
+		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
 
 		for (uint8_t j = 0; j < 13; j++) {
 			// invalid data (HAM24/18 uncorrectable error detected), skip group
-			if ((decoded[j] & 0x80000000) > 0) {
-				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", decoded[j]);
+			if ((triplets[j] & 0x80000000) > 0) {
+				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[j]);
 				continue;
 			}
 
-			uint8_t data = (decoded[j] & 0x3f800) >> 11;
-			uint8_t mode = (decoded[j] & 0x7c0) >> 6;
-			uint8_t address = decoded[j] & 0x3f;
+			uint8_t data = (triplets[j] & 0x3f800) >> 11;
+			uint8_t mode = (triplets[j] & 0x7c0) >> 6;
+			uint8_t address = triplets[j] & 0x3f;
 			uint8_t row_address_group = (address >= 40) && (address <= 63);
+//> Y/26: D/79 M/18 A/18
 
 			// ETS 300 706, chapter 12.3.1, table 27: set active position
 			if ((mode == 0x04) && (row_address_group == YES)) {
@@ -620,31 +642,53 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			}
 		}
 	}
-	else if (y == 28) {
-		VERBOSE_ONLY {
-			if (states.x28_not_implemented_notified == NO) {
-				fprintf(stderr, "- Packet X/28 received; not yet implemented; you won't be able to use secondary language etc.\n");
-				states.x28_not_implemented_notified = YES;
+	else if ((m == MAGAZINE(config.page)) && (y == 28) && ((designation_code == 0) || (designation_code == 4))) {
+		// ETS 300 706, chapter 9.4.2: Packet X/28/0 Format 1
+		// charsets changes only
+		uint32_t triplets[13] = { 0 };
+		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+
+		if ((triplets[0] & 0x80000000) > 0) {
+			VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[0]);
+			return;
+		}
+
+		// 9.4.2.2 Coding for basic Level 1 Teletext pages
+		// X28/0/Format 1
+		if ((triplets[0] & 0x0f) == 0x00) {
+			primary_charset.g0_x28 = (triplets[0] & 0x3f80) >> 7;
+			remap_g0_charset(primary_charset.g0_x28);
+		}
+	}
+	else if ((m == MAGAZINE(config.page)) && (y == 29) && ((designation_code == 0) || (designation_code == 4))) {
+		uint32_t triplets[13] = { 0 };
+		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+
+		if ((triplets[0] & 0x80000000) > 0) {
+			VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[0]);
+			return;
+		}
+
+		if ((triplets[0] & 0x0f) == 0x00) {
+			primary_charset.g0_m29 = (triplets[0] & 0x3f80) >> 7;
+			if (primary_charset.g0_x28 == UNDEF) {
+				remap_g0_charset(primary_charset.g0_m29);
 			}
 		}
 	}
-	else if (y == 29) {
-		VERBOSE_ONLY {
-			if (states.m29_not_implemented_notified == NO) {
-				fprintf(stderr, "- Packet M/29 received; not yet implemented; you won't be able to use secondary language etc.\n");
-				states.m29_not_implemented_notified = YES;
-			}
-		}
-	}
-	else if ((y == 30) && (m == 8)) {
+	else if ((m == 8) && (y == 30)) {
 		// ETS 300 706, chapter 9.8: Broadcast Service Data Packets
 		if (states.programme_info_processed == NO) {
 			// ETS 300 706, chapter 9.8.1: Packet 8/30 Format 1
 			if (unham_8_4(packet->data[0]) < 2) {
 				fprintf(stderr, "- Programme Identification Data = ");
 				for (uint8_t i = 20; i < 40; i++) {
+					uint8_t c = telx_to_ucs2(packet->data[i]);
+					// strip any control codes from PID, eg. TVP station
+					if (c < 0x20) continue;
+
 					char u[4] = { 0, 0, 0, 0 };
-					ucs2_to_utf8(u, telx_to_ucs2(packet->data[i]));
+					ucs2_to_utf8(u, c);
 					fprintf(stderr, "%s", u);
 				}
 				fprintf(stderr, "\n");
@@ -807,7 +851,7 @@ void analyze_pat(uint8_t *buffer, uint8_t size) {
 //!
 if (pat.pointer_field > 0) {
 	fprintf(stderr, "! pat.pointer_field > 0 (0x%02x)\n\n", pat.pointer_field);
-	goto fail;
+	//goto fail;
 }
 
 	pat.table_id = buffer[1];
@@ -846,7 +890,7 @@ void analyze_pmt(uint8_t *buffer, uint8_t size) {
 //!
 if (pmt.pointer_field > 0) {
 	fprintf(stderr, "! pmt.pointer_field > 0 (0x%02x)\n\n", pmt.pointer_field);
-	goto fail;
+	//goto fail;
 }
 
 	pmt.table_id = buffer[1];

@@ -33,18 +33,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
 
 #include <inttypes.h>
 
-// ETS 300 706, chapter 15.2, table 32: Function of Default G0 and G2 Character Set Designation
-// and National Option Selection bits in packets X/28/0 Format 1, X/28/4, M/29/0 and M/29/4
-//
-// lang_code bits for primary Language:
-// bits 7-4 corresponds to bits 14-11 of 28 packet's first triplet
-// bits 3-1 corresponds to bits C12-C14 of packet 0 (lang)
-//
-// lang_code bits for secondary Language:
-// bits 7-5 corresponds to bits 3-1 of 28 packet's second triplet
-// bits 4,2 corresponds to bits 18,16 of 28 packet's first triplet
-// bits 3,1 corresponds to bits 15,17 of 28 packet's first triplet
-
 typedef enum {
 	LATIN = 0,
 	CYRILLIC1,
@@ -54,6 +42,10 @@ typedef enum {
 	ARABIC,
 	HEBREW
 } g0_charsets_t;
+
+// Note: All characters are encoded in UCS-2
+
+// --- G0 ----------------------------------------------------------------------
 
 // G0 charsets
 uint16_t G0[5][96] = {
@@ -103,38 +95,79 @@ uint16_t G0[5][96] = {
 	//}
 };
 
+// array positions where chars from G0_LATIN_NATIONAL_SUBSETS are injected into G0[LATIN]
+const uint8_t G0_LATIN_NATIONAL_SUBSETS_POSITIONS[13] = {
+	0x03, 0x04, 0x20, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x5b, 0x5c, 0x5d, 0x5e
+};
+
+// ETS 300 706, chapter 15.2, table 32: Function of Default G0 and G2 Character Set Designation
+// and National Option Selection bits in packets X/28/0 Format 1, X/28/4, M/29/0 and M/29/4
+
 // Latin National Option Sub-sets
-const uint16_t G0_LATIN_NATIONAL_SUBSETS[8][13] = {
-	{ // 000 = English
+const uint16_t G0_LATIN_NATIONAL_SUBSETS[14][13] = {
+	{ // 0, English
 		0x00a3, 0x0024, 0x0040, 0x00ab, 0x00bd, 0x00bb, 0x005e, 0x0023, 0x002d, 0x00bc, 0x00a6, 0x00be, 0x00f7
 	},
-	{ // 001 = French
+	{ // 1, French
 		0x00e9, 0x00ef, 0x00e0, 0x00eb, 0x00ea, 0x00f9, 0x00ee, 0x0023, 0x00e8, 0x00e2, 0x00f4, 0x00fb, 0x00e7
 	},
-	{ // 010 = Swedish, Finnish, Hungarian
+	{ // 2, Swedish, Finnish, Hungarian
 		0x0023, 0x00a4, 0x00c9, 0x00c4, 0x00d6, 0x00c5, 0x00dc, 0x005f, 0x00e9, 0x00e4, 0x00f6, 0x00e5, 0x00fc
 	},
-	{ // 011 = Czech, Slovak
+	{ // 3, Czech, Slovak
 		0x0023, 0x016f, 0x010d, 0x0165, 0x017e, 0x00fd, 0x00ed, 0x0159, 0x00e9, 0x00e1, 0x011b, 0x00fa, 0x0161
 	},
-	{ // 100 = German
+	{ // 4, German
 		0x0023, 0x0024, 0x00a7, 0x00c4, 0x00d6, 0x00dc, 0x005e, 0x005f, 0x00b0, 0x00e4, 0x00f6, 0x00fc, 0x00df
 	},
-	{ // 101 = Portuguese, Spanish
+	{ // 5, Portuguese, Spanish
 		0x00e7, 0x0024, 0x00a1, 0x00e1, 0x00e9, 0x00ed, 0x00f3, 0x00fa, 0x00bf, 0x00fc, 0x00f1, 0x00e8, 0x00e0
 	},
-	{ // 110 = Italian
+	{ // 6, Italian
 		0x00a3, 0x0024, 0x00e9, 0x00b0, 0x00e7, 0x00bb, 0x005e, 0x0023, 0x00f9, 0x00e0, 0x00f2, 0x00e8, 0x00ec
 	},
-	{ // 111 = Romanian
+	{ // 7, Romanian
 		0x0023, 0x00a4, 0x0162, 0x00c2, 0x015e, 0x0102, 0x00ce, 0x0131, 0x0163, 0x00e2, 0x015f, 0x0103, 0x00ee
+	},
+	{ // 8, Polish
+		0x0023, 0x0144, 0x0105, 0x017b, 0x015a, 0x0141, 0x0107, 0x00f3, 0x0119, 0x017c, 0x015b, 0x0142, 0x017a
+	},
+	{ // 9, Turkish
+		0
+	},
+	{ // a, Serbian/Croatian/Slovenian
+		0
+	},
+	{ // b, Rumanian
+		0
+	},
+	{ // c, Estonian
+		0
+	},
+	{ // d, Lettish/Lithunian
+		0
 	}
 };
 
-// array positions where chars from G0_LATIN_NATIONAL_SUBSETS are injected into G0[LATIN]
-const uint8_t G0_LATIN_NATIONAL_SUBSET_POSITIONS[13] = {
-	0x03, 0x04, 0x20, 0x3b, 0x3c, 0x3d, 0x3e, 0x3f, 0x40, 0x5b, 0x5c, 0x5d, 0x5e
+// References to the G0_LATIN_NATIONAL_SUBSETS array
+const uint8_t G0_LATIN_NATIONAL_SUBSETS_MAP[56] = {
+	// X/28, M/29 Triple 1 bits 14 - 11: 0
+	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+	// X/28, M/29 Triple 1 bits 14 - 11: 1
+	0x08, 0x01, 0x02, 0x03, 0x04, 0xff, 0x06, 0xff,
+	// X/28, M/29 Triple 1 bits 14 - 11: 2
+	0x00, 0x01, 0x02, 0x09, 0x04, 0x05, 0x06, 0xff,
+	// X/28, M/29 Triple 1 bits 14 - 11: 3
+	0xff, 0xff, 0xff, 0xff, 0xff, 0x0a, 0xff, 0x0b,
+	// X/28, M/29 Triple 1 bits 14 - 11: 4
+	0xff, 0xff, 0x0c, 0x03, 0x04, 0xff, 0x0d, 0xff,
+	// X/28, M/29 Triple 1 bits 14 - 11: 5
+	0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+	// X/28, M/29 Triple 1 bits 14 - 11: 6
+	0xff, 0xff, 0xff, 0x09, 0xff, 0xff, 0xff, 0xff
 };
+
+// --- G2 ----------------------------------------------------------------------
 
 const uint16_t G2[1][96] = {
 	{ // Latin G2 Supplementary Set
