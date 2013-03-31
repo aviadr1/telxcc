@@ -64,6 +64,11 @@ ISO/IEC STANDARD 6937 Third edition (2001-12-15)
 Werner Brückner -- Teletext in digital television
 */
 
+#define _POSIX_C_SOURCE 200112L
+#ifdef __MINGW32__
+#undef __STRICT_ANSI__
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +87,7 @@ Werner Brückner -- Teletext in digital television
 #include <fcntl.h>
 #include <io.h>
 int _CRT_fmode = _O_BINARY;
-int _fmode = _O_BINARY;
+//int _fmode = _O_BINARY;
 
 // for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
 #define WIN32_LEAN_AND_MEAN
@@ -1066,18 +1071,18 @@ int main(const int argc, char *argv[]) {
 	signal(SIGTERM, signal_handler);
 
 	if ((config.input_name == NULL) || (strcmp(config.input_name, "-") == 0)) {
-    	fin = stdin;
-    } else {
-    	if ((fin = fopen(config.input_name, "rb")) == NULL) {
-    		fprintf(stderr, "! Could not open input file \"%s\".\n\n", config.input_name);
+		fin = stdin;
+	} else {
+		if ((fin = fopen(config.input_name, "rb")) == NULL) {
+			fprintf(stderr, "! Could not open input file \"%s\".\n\n", config.input_name);
 			goto fail;
-    	}
-    }
+		}
+	}
 
-	//if (isatty(fin)) {
-	//	fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
-	//  goto fail;
-	//}
+	if (isatty(fileno(fin))) {
+		fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
+		goto fail;
+	}
 
 	if ((config.output_name == NULL) || (strcmp(config.output_name, "-") == 0)) {
 		fout = stdout;
@@ -1092,10 +1097,9 @@ int main(const int argc, char *argv[]) {
 	setvbuf(fout, (char*)NULL, _IOFBF, 0);
 
 #ifdef __MINGW32__
-	// 1 = stdout, the only multiplatform code I could use :-/
-	//if (isatty(fout)) {
-	//	fprintf(stderr, "! UTF-8 encoded closed captions printed directly into fout could be corrupted on Windows platform\n");
-	//}
+	if (isatty(fileno(fout))) {
+		fprintf(stderr, "! UTF-8 encoded closed captions printed directly into fout could be corrupted on Windows platform\n");
+	}
 #endif
 
 	// print UTF-8 BOM chars
