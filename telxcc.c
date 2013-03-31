@@ -230,17 +230,12 @@ transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 uint8_t receiving_data = NO;
 
 // current charset (charset can be -- and always is -- changed during transmission)
-typedef struct {
-	uint8_t default0;
+struct {
 	uint8_t current;
 	uint8_t g0_m29;
 	uint8_t g0_x28;
-} charset_t;
-charset_t primary_charset = {
-	0x00, 0x00, UNDEF, UNDEF
-};
-charset_t secondary_charset = {
-	0x00, 0x00, UNDEF, UNDEF
+} primary_charset = {
+	0x00, UNDEF, UNDEF
 };
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
@@ -314,11 +309,11 @@ void remap_g0_charset(uint8_t c) {
 	if (c != primary_charset.current) {
 		uint8_t m = G0_LATIN_NATIONAL_SUBSETS_MAP[c];
 		if (m == 0xff) {
-			fprintf(stderr, "- G0 Latin National Subset ID %1x/%1x is not implemented, ignoring\n", (c >> 3), (c & 0x7));
+			fprintf(stderr, "- G0 Latin National Subset ID 0x%1x.%1x is not implemented, ignoring\n", (c >> 3), (c & 0x7));
 		}
 		else {
-			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSETS_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[m][j];
-			VERBOSE_ONLY fprintf(stderr, "- G0 Charset translation table remapped to G0 Latin National Subset ID %1x/%1x\n", (c >> 3), (c & 0x7));
+			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSETS_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[m].characters[j];
+			VERBOSE_ONLY fprintf(stderr, "- Using G0 Latin National Subset ID 0x%1x.%1x (%s)\n", (c >> 3), (c & 0x7), G0_LATIN_NATIONAL_SUBSETS[m].language);
 			primary_charset.current = c;
 		}
 	}
@@ -572,9 +567,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		receiving_data = YES;
 		primary_charset.g0_x28 = UNDEF;
 
-		uint8_t c = primary_charset.default0;
-		if (primary_charset.g0_m29 != UNDEF) c = primary_charset.g0_m29;
-		c = (c & 0x78) | charset;
+		uint8_t c = (primary_charset.g0_m29 != UNDEF) ? primary_charset.g0_m29 : charset;
 		remap_g0_charset(c);
 
 		/*
@@ -596,7 +589,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		page_buffer.tainted = YES;
 	}
 	else if ((m == MAGAZINE(config.page)) && (y == 26) && (receiving_data == YES)) {
-		// ETS 300 706, chapter 12.3.2 (X/26 definition)
+		// ETS 300 706, chapter 12.3.2: X/26 definition
 		uint8_t x26_row = 0;
 		uint8_t x26_col = 0;
 
@@ -644,37 +637,51 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			}
 		}
 	}
-	else if ((m == MAGAZINE(config.page)) && (y == 28) && ((designation_code == 0) || (designation_code == 4))) {
-		// ETS 300 706, chapter 9.4.2: Packet X/28/0 Format 1
-		// charsets changes only
-		uint32_t triplets[13] = { 0 };
-		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+	else if ((m == MAGAZINE(config.page)) && (y == 28) && (receiving_data == YES)) {
+		// TODO:
+		//   ETS 300 706, chapter 9.4.7: Packet X/28/4
+		//   Where packets 28/0 and 28/4 are both transmitted as part of a page, packet 28/0 takes precedence over 28/4 for all but the colour map entry coding.
+		if ((designation_code == 0) || (designation_code == 4)) {
+			// ETS 300 706, chapter 9.4.2: Packet X/28/0 Format 1
+			// ETS 300 706, chapter 9.4.7: Packet X/28/4
+			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-		if ((triplets[0] & 0x80000000) > 0) {
-			VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[0]);
-			return;
-		}
-
-		// 9.4.2.2 Coding for basic Level 1 Teletext pages
-		// X28/0/Format 1
-		if ((triplets[0] & 0x0f) == 0x00) {
-			primary_charset.g0_x28 = (triplets[0] & 0x3f80) >> 7;
-			remap_g0_charset(primary_charset.g0_x28);
+			// invalid data (HAM24/18 uncorrectable error detected), skip group
+			if ((triplet0 & 0x80000000) > 0) {
+				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
+			}
+			else {
+				// ETS 300 706, chapter 9.4.2: Packet X/28/0 _Format_1_
+				if ((triplet0 & 0x0f) == 0x00) {
+					primary_charset.g0_x28 = (triplet0 & 0x3f80) >> 7;
+					remap_g0_charset(primary_charset.g0_x28);
+				}
+			}
 		}
 	}
-	else if ((m == MAGAZINE(config.page)) && (y == 29) && ((designation_code == 0) || (designation_code == 4))) {
-		uint32_t triplets[13] = { 0 };
-		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
+	else if ((m == MAGAZINE(config.page)) && (y == 29)) {
+		// TODO:
+		//   ETS 300 706, chapter 9.5.1 Packet M/29/0
+		//   Where M/29/0 and M/29/4 are transmitted for the same magazine, M/29/0 takes precedence over M/29/4.
+		if ((designation_code == 0) || (designation_code == 4)) {
+			// ETS 300 706, chapter 9.5.1: Packet M/29/0
+			// ETS 300 706, chapter 9.5.3: Packet M/29/4
+			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-		if ((triplets[0] & 0x80000000) > 0) {
-			VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[0]);
-			return;
-		}
-
-		if ((triplets[0] & 0x0f) == 0x00) {
-			primary_charset.g0_m29 = (triplets[0] & 0x3f80) >> 7;
-			if (primary_charset.g0_x28 == UNDEF) {
-				remap_g0_charset(primary_charset.g0_m29);
+			// invalid data (HAM24/18 uncorrectable error detected), skip group
+			if ((triplet0 & 0x80000000) > 0) {
+				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
+			}
+			else {
+				// ETS 300 706, table 11: Coding of Packet M/29/0
+				// ETS 300 706, table 13: Coding of Packet M/29/4
+				if ((triplet0 & 0xff) == 0x00) {
+					primary_charset.g0_m29 = (triplet0 & 0x3f80) >> 7;
+					// X/28 takes precedence over M/29
+					if (primary_charset.g0_x28 == UNDEF) {
+						remap_g0_charset(primary_charset.g0_m29);
+					}
+				}
 			}
 		}
 	}

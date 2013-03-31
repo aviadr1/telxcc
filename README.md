@@ -141,7 +141,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     - Programme Identification Data = OGLOSZENIA -> 640
     - Programme Timestamp (UTC) = Thu Mar 28 14:40:00 2013
     - Transmission mode = serial
-    - G0 Charset translation table remapped to G0 Latin National Subset ID 1/0
+    - Using G0 Latin National Subset ID 0x1.0 (Polish)
     ! Unrecoverable data error; UNHAM8/4(70)
     - There were some CC data carried via pages = 777 778 484 488 
     - Done (181250 teletext packets processed, 321 frames produced)
