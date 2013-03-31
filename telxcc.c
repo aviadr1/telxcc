@@ -41,6 +41,8 @@ Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS samp
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
 characterised by the use of spacing attributes only and a limited alphanumeric and mosaics repertoire.
 Presentation Level 1.5 decoder responds as Level 1 but the character repertoire is extended via packets X/26.
+Selection of national option sub-sets related features from Presentation Level 2.5 feature set have been implemented, too.
+(X/28/0 Format 1, X/28/4, M/29/0 and M/29/4 packets)
 
 Further documentation:
 ETSI TS 101 154 V1.9.1 (2009-09), Technical Specification
@@ -387,7 +389,7 @@ void process_page(teletext_page_t *page) {
 
 	if (config.se_mode == YES) {
 		++frames_produced;
-		fprintf(fout, "%.3f|", (double)page->show_timestamp / 1000);
+		fprintf(fout, "%.3f|", (double)page->show_timestamp / 1000.0);
 	}
 	else {
 		char timecode_show[24] = { 0 };
@@ -651,7 +653,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
 			}
 			else {
-				// ETS 300 706, chapter 9.4.2: Packet X/28/0 _Format_1_
+				// ETS 300 706, chapter 9.4.2: Packet X/28/0 Format 1 only
 				if ((triplet0 & 0x0f) == 0x00) {
 					primary_charset.g0_x28 = (triplet0 & 0x3f80) >> 7;
 					remap_g0_charset(primary_charset.g0_x28);
@@ -802,32 +804,22 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 		t = pts / 90;
 	}
 
-
-
-
-// ----------------------------------------------------------------------------
-
-
 	static int64_t delta = 0;
 	static uint32_t t0 = 0;
 	if (states.pts_initialized == NO) {
 		delta = 1000 * config.offset + 1000 * config.utc_refvalue - t;
-		//t0 = t;
+		t0 = t;
 		states.pts_initialized = YES;
+
+		if ((using_pts == NO) && (global_timestamp == 0)) {
+			// We are using global PCR, nevertheless we still have not received valid PCR timestamp yet
+			states.pts_initialized = NO;
+		}
 	}
-	//if (t < t0) delta += 95443718;
+	if (t < t0) delta = last_timestamp;
 	last_timestamp = t + delta;
-
-	//fprintf(stderr, "%f, %f, %lli, %llu\n", t/1000.0, t0/1000.0, delta, last_timestamp);
-
-	//t0 = t;
-
-
-// ----------------------------------------------------------------------------
-
-
-
-
+//fprintf(stderr, "%lu, %lu, %lli, %llu\n", t, t0, delta, last_timestamp);
+	t0 = t;
 
 	// skip optional PES header and process each 46 bytes long teletext packet
 	uint16_t i = 7;

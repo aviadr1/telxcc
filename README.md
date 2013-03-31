@@ -8,7 +8,7 @@ telxcc is:
 * easy to use
 * open-source
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
-* modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5)
+* modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5/2.5)
 * stable
 * secure (does not require any escalated privileges)
 * high performing (even SSD is the bottleneck)
