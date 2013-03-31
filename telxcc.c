@@ -75,7 +75,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define TELXCC_VERSION "2.4.1"
+#define TELXCC_VERSION "2.4.2"
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
@@ -311,7 +311,7 @@ void remap_g0_charset(uint8_t c) {
 	if (c != primary_charset.current) {
 		uint8_t m = G0_LATIN_NATIONAL_SUBSETS_MAP[c];
 		if (m == 0xff) {
-			fprintf(stderr, "- G0 Latin National Subset ID 0x%1x.%1x is not implemented, ignoring\n", (c >> 3), (c & 0x7));
+			fprintf(stderr, "- G0 Latin National Subset ID 0x%1x.%1x is not implemented\n", (c >> 3), (c & 0x7));
 		}
 		else {
 			for (uint8_t j = 0; j < 13; j++) G0[LATIN][G0_LATIN_NATIONAL_SUBSETS_POSITIONS[j]] = G0_LATIN_NATIONAL_SUBSETS[m].characters[j];
@@ -599,8 +599,8 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
 
 		for (uint8_t j = 0; j < 13; j++) {
-			// invalid data (HAM24/18 uncorrectable error detected), skip group
 			if ((triplets[j] & 0x80000000) > 0) {
+				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[j]);
 				continue;
 			}
@@ -648,8 +648,8 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			// ETS 300 706, chapter 9.4.7: Packet X/28/4
 			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-			// invalid data (HAM24/18 uncorrectable error detected), skip group
 			if ((triplet0 & 0x80000000) > 0) {
+				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
 			}
 			else {
@@ -670,8 +670,8 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			// ETS 300 706, chapter 9.5.3: Packet M/29/4
 			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-			// invalid data (HAM24/18 uncorrectable error detected), skip group
 			if ((triplet0 & 0x80000000) > 0) {
+				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
 			}
 			else {
@@ -808,7 +808,6 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	static uint32_t t0 = 0;
 	if (states.pts_initialized == NO) {
 		delta = 1000 * config.offset + 1000 * config.utc_refvalue - t;
-		t0 = t;
 		states.pts_initialized = YES;
 
 		if ((using_pts == NO) && (global_timestamp == 0)) {
@@ -818,7 +817,6 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	}
 	if (t < t0) delta = last_timestamp;
 	last_timestamp = t + delta;
-//fprintf(stderr, "%lu, %lu, %lli, %llu\n", t, t0, delta, last_timestamp);
 	t0 = t;
 
 	// skip optional PES header and process each 46 bytes long teletext packet
@@ -1036,6 +1034,7 @@ int main(const int argc, char *argv[]) {
 			InitCommonControlsEx(&iccx);
 
 			MessageBoxW(NULL, L"telxcc is a console application. Please run it from command line (cmd.exe), scheduler or another application.", L"telxcc", MB_OK | MB_ICONWARNING);
+			goto fail;
 		}
 	}
 #endif
