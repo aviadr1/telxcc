@@ -2,15 +2,26 @@
 
 telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS) into SubRip text files (SRT).
 
-telxcc is
+telxcc is:
 
 * tiny and lightweight (few KiBs binary, no lib dependencies)
 * easy to use
+* open-source
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
 * modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
+* secure (does not require any escalated privileges)
 * high performing (even SSD is the bottleneck)
 * well tested (every build is automatically tested against English, German, Czech, Italian, Norwegian, Swedish, Finnish, Slovenian and Polish TS files from different TV stations)
+* 100% handcrafted in Prague, CZ. :)
+
+
+telxcc is easy to use and flexible at the same time:
+
+* telxcc could be run in "search engine mode", in which case it produces plain text output suitable for indexing (UTC airtime and caption in plain text)
+* telxcc tries to automatically detect all parameters needed (transport stream ID, teletext CC page, timestamps) and environment (the way it is started on Windows for instance)
+* it could be easily integrated (files could be redirected or specified on command line as parameters)
+
 
 telxcc is *the only utility having correct implementation* for following languages
 
@@ -35,6 +46,7 @@ telxcc is *the only utility having correct implementation* for following languag
 * Swedish
 * Turkish
 
+
 telxcc also has limited/untested implementation of cyrillic and Greek alphabet for
 
 * Bulgarian
@@ -46,17 +58,20 @@ telxcc also has limited/untested implementation of cyrillic and Greek alphabet f
 
 and it is also already prepared for arabic and hebrew scripts (no such TS samples are unfortunately available for testing).
 
-telxcc could be run in "search engine mode", in which case it produces TXT output suitable for indexing (UTC airtime and caption in plain text).
 
 ## Compiled binaries and other downloads
 
-* [telxcc v2.4.0 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.0.zip.asc))
-* [telxcc v2.4.0 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.0.zip.asc))
-* [telxcc v2.4.0 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.0.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.0.zip.asc))
+* [telxcc v2.4.1 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.1.zip.asc))
+* [telxcc v2.4.1 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.1.zip.asc))
+* [telxcc v2.4.1 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.1.zip.asc))
+
 
 ## Pricing and Support
 
-telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.*
+telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.* 
+If you like telxcc and use it, please let us know, it motivates us in further development.
+Important: telxcc will *never ever* be like Emacs; it is simple and specialized utility. Do you need another output format? Just transform current one. Is online/realtime processing over TCP/IP required? I suggest Node.js as a wrapper…
+
 
 ## Build
 
@@ -81,6 +96,7 @@ Windows binary is build in MinGW by:
     C:\devel\telxcc> mingw32-make -f Makefile.win strip
 
 telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Windows. (Generic binary files are included.)
+
 
 ## Command line params
 
@@ -109,6 +125,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
 
     $ man ./telxcc.1 ↵
+
     
 ## Usage example
 
