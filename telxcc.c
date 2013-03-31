@@ -239,6 +239,9 @@ typedef struct {
 charset_t primary_charset = {
 	0x00, 0x00, UNDEF, UNDEF
 };
+charset_t secondary_charset = {
+	0x00, 0x00, UNDEF, UNDEF
+};
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
 struct {
@@ -744,7 +747,7 @@ void process_pes_packet(uint8_t *buffer, uint16_t size) {
 	if (pes_stream_id != 0xbd) return;
 
 	// PES packet length
-	// ETSI EN 301 775 V1.2.1 (2003-05) chapter 4.3: (N × 184) - 6 + 6 B header
+	// ETSI EN 301 775 V1.2.1 (2003-05) chapter 4.3: (N x 184) - 6 + 6 B header
 	uint16_t pes_packet_length = 6 + ((buffer[4] << 8) | buffer[5]);
 	// Can be zero. If the "PES packet length" is set to zero, the PES packet can be of any length.
 	// A value of zero for the PES packet length can be used only when the PES packet payload is a video elementary stream.
