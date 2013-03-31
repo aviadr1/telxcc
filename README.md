@@ -7,10 +7,46 @@ telxcc is
 * tiny and lightweight (few KiBs binary, no lib dependencies)
 * easy to use
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
-* modern (fully supports UTF-8, conforms to ETSI 300 706 Presentation Level 1.5)
+* modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5)
 * stable
-* high performing (on Macbook with Intel SSD it processes TS files at speed over 200 MiB/s, with less than 30 % of 1 CPU core utilization, SSD is the bottleneck)
-* well tested (every build is automatically tested against English, German, Czech, Italian, Norwegian, Swedish, Finnish and Slovenian TS files)
+* high performing (even SSD is the bottleneck)
+* well tested (every build is automatically tested against English, German, Czech, Italian, Norwegian, Swedish, Finnish, Slovenian and Polish TS files from different TV stations)
+
+telxcc is *the only utility having correct implementation* for following languages
+
+* Croatian
+* Czech
+* English
+* Estonian
+* Finnish
+* French
+* German
+* Hungarian
+* Italian
+* Lettish
+* Lithuanian
+* Polish
+* Portuguese
+* Rumanian
+* Serbian
+* Slovak
+* Slovenian
+* Spanish
+* Swedish
+* Turkish
+
+telxcc also has limited/untested implementation of cyrillic and Greek alphabet for
+
+* Bulgarian
+* Croatian
+* Greek
+* Russian
+* Serbian
+* Ukrainian
+
+and it is also already prepared for arabic and hebrew scripts (no such TS samples are unfortunately available for testing).
+
+telxcc could be run in "search engine mode", in which case it produces TXT output suitable for indexing (UTC airtime and caption in plain text).
 
 ## Compiled binaries and other downloads
 
@@ -53,25 +89,45 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.4.0 (Built on Feb  5 2013)
+    Version 2.4.1 (Built on Mar 31 2013)
     
-    Usage: ./telxcc [-h] [-v] [-p PAGE] [-t TID] [-o OFFSET] [-n] [-1] [-c] [-s [REF]]
-    
+    Usage: ./telxcc [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
+      -i INPUT    transport stream (- = STDIN, default STDIN)
+      -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)
+      -h          this help text
+      -v          be verbose
+      -p PAGE     teletext page number carrying closed captions
+      -t TID      transport stream PID of teletext data sub-stream
+                  if the value of 8192 is specified, the first suitable stream will be used
+      -f OFFSET   subtitles offset in seconds
+      -n          do not print UTF-8 BOM characters to the file
+      -1          produce at least one (dummy) frame
+      -c          output colour information in font HTML tags
+      -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
+                  if REF (unix timestamp) is omitted, use current system time,
+                  telxcc will automatically switch to transport stream UTC timestamps when available    
+
+
+    $ man ./telxcc.1 ↵
     
 ## Usage example
 
-    $ ./telxcc < SWR_PID-804_PAGE-150.ts > SWR.srt ↵
+    $ ./telxcc < TVP.ts > TVP.srt ↵
     telxcc - TELeteXt Closed Captions decoder
     (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
     Please consider making a Paypal donation to support our free GNU/GPL software:
     http://fore.rs/donate/telxcc
-    Version 2.4.0 (Built on Feb  5 2013)
+    Version 2.4.1 (Built on Mar 31 2013)
     
-    - Found VBI/teletext stream ID 804 (0x324) for SID 28113 (0x6dd1)
-    - No teletext page specified, first received suitable page is 150, not guaranteed
-    - Programme Identification Data = SWR                 
-    - Programme Timestamp (UTC) = Thu Jan 19 21:42:43 2012
-    - Done (29896 teletext packets processed, 42 frames produced)
-    
+    - Found VBI/teletext stream ID 205 (0xcd) for SID 45 (0x2d)
+    - PID 0xbd PTS available
+    - Programme Identification Data = OGLOSZENIA -> 640
+    - Programme Timestamp (UTC) = Thu Mar 28 14:40:00 2013
+    - Transmission mode = serial
+    - G0 Charset translation table remapped to G0 Latin National Subset ID 1/0
+    ! Unrecoverable data error; UNHAM8/4(70)
+    - There were some CC data carried via pages = 777 778 484 488 
+    - Done (181250 teletext packets processed, 321 frames produced)
+
     $ _
 

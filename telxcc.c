@@ -614,7 +614,6 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			uint8_t mode = (triplets[j] & 0x7c0) >> 6;
 			uint8_t address = triplets[j] & 0x3f;
 			uint8_t row_address_group = (address >= 40) && (address <= 63);
-//> Y/26: D/79 M/18 A/18
 
 			// ETS 300 706, chapter 12.3.1, table 27: set active position
 			if ((mode == 0x04) && (row_address_group == YES)) {
@@ -854,7 +853,7 @@ void analyze_pat(uint8_t *buffer, uint8_t size) {
 //!
 if (pat.pointer_field > 0) {
 	fprintf(stderr, "! pat.pointer_field > 0 (0x%02x)\n\n", pat.pointer_field);
-	//goto fail;
+	return;
 }
 
 	pat.table_id = buffer[1];
@@ -893,7 +892,7 @@ void analyze_pmt(uint8_t *buffer, uint8_t size) {
 //!
 if (pmt.pointer_field > 0) {
 	fprintf(stderr, "! pmt.pointer_field > 0 (0x%02x)\n\n", pmt.pointer_field);
-	//goto fail;
+	return;
 }
 
 	pmt.table_id = buffer[1];
