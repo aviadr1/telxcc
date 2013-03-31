@@ -65,7 +65,9 @@ Werner Brückner -- Teletext in digital television
 */
 
 #define _POSIX_C_SOURCE 200112L
+
 #ifdef __MINGW32__
+// MINGW32 bug fix
 #undef __STRICT_ANSI__
 #endif
 
@@ -85,9 +87,7 @@ Werner Brückner -- Teletext in digital television
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
 #include <fcntl.h>
-#include <io.h>
 int _CRT_fmode = _O_BINARY;
-//int _fmode = _O_BINARY;
 
 // for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
 #define WIN32_LEAN_AND_MEAN
@@ -852,7 +852,7 @@ void analyze_pat(uint8_t *buffer, uint8_t size) {
 	pat_t pat = { 0 };
 	pat.pointer_field = buffer[0];
 
-//!
+// FIXME
 if (pat.pointer_field > 0) {
 	fprintf(stderr, "! pat.pointer_field > 0 (0x%02x)\n\n", pat.pointer_field);
 	return;
@@ -891,7 +891,7 @@ void analyze_pmt(uint8_t *buffer, uint8_t size) {
 	pmt_t pmt = { 0 };
 	pmt.pointer_field = buffer[0];
 
-//!
+// FIXME
 if (pmt.pointer_field > 0) {
 	fprintf(stderr, "! pmt.pointer_field > 0 (0x%02x)\n\n", pmt.pointer_field);
 	return;
@@ -936,7 +936,7 @@ uint8_t exit_request = NO;
 
 void signal_handler(int sig) {
 	if ((sig == SIGINT) || (sig == SIGTERM)) {
-		fprintf(stderr, "- SIGINT/SIGTERM received, performing graceful exit\n");
+		fprintf(stderr, "- SIGINT/SIGTERM received, preparing graceful exit\n");
 		exit_request = YES;
 	}
 }
@@ -1037,7 +1037,6 @@ int main(const int argc, char *argv[]) {
 			iccx.dwSize = sizeof(iccx);
 			iccx.dwICC = ICC_STANDARD_CLASSES;
 			InitCommonControlsEx(&iccx);
-
 			MessageBoxW(NULL, L"telxcc is a console application. Please run it from command line (cmd.exe), scheduler or another application.", L"telxcc", MB_OK | MB_ICONWARNING);
 			goto fail;
 		}
@@ -1080,7 +1079,7 @@ int main(const int argc, char *argv[]) {
 	}
 
 	if (isatty(fileno(fin))) {
-		fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. :) STDIN must be redirected.\n\n");
+		fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. STDIN must be redirected.\n\n");
 		goto fail;
 	}
 
@@ -1098,7 +1097,7 @@ int main(const int argc, char *argv[]) {
 
 #ifdef __MINGW32__
 	if (isatty(fileno(fout))) {
-		fprintf(stderr, "! UTF-8 encoded closed captions printed directly into fout could be corrupted on Windows platform\n");
+		fprintf(stderr, "! UTF-8 encoded closed captions printed directly into STDOUT could be corrupted on Windows platform\n");
 	}
 #endif
 
