@@ -66,11 +66,6 @@ Werner Brückner -- Teletext in digital television
 
 #define _POSIX_C_SOURCE 200112L
 
-#ifdef __MINGW32__
-// MINGW32 bug fix
-#undef __STRICT_ANSI__
-#endif
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
