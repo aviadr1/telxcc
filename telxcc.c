@@ -160,7 +160,7 @@ typedef enum {
 } transmission_mode_t;
 
 const char* TTXT_COLOURS[8] = {
-//  black,     red,       green,     yellow,    blue,      magenta,   cyan,      white
+	//black,   red,       green,     yellow,    blue,      magenta,   cyan,      white
 	"#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
 };
 
