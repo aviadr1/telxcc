@@ -77,12 +77,13 @@ Important: telxcc will *never ever* be like Emacs; it is simple and specialized 
 
 To install, or uninstall telxcc on Linux and Mac:
 
-  $ make install ↵
-  $ make uninstall ↵
+    $ make install ↵
+
+    $ make uninstall ↵
 
 To build binary for Intel Core 2 processor architecture just type:
 
-  $ make ↵
+    $ make ↵
 
 On Mac typically you can use clang preprocessor:
 
@@ -96,7 +97,7 @@ Or you can disable all optimizations (binary target is any x86 processor):
 
     $ make CCFLAGS="-Wall -pedantic -std=gnu99"
 
-Windows binary is build in MinGW by:
+Windows binary is build in MinGW by (MinGW must be included in PATH):
 
     C:\devel\telxcc> mingw32-make -f Makefile.win strip
 
