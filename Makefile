@@ -11,6 +11,8 @@ all : $(EXEC)
 strip : $(EXEC)
 	-strip $<
 
+man : telxcc.1.gz
+
 .PHONY : clean
 clean :
 	-rm -f $(OBJS) $(EXEC)
@@ -20,6 +22,9 @@ $(EXEC) : $(OBJS)
 
 %.o : %.c
 	$(CC) -c $(CCFLAGS) -o $@ $<
+
+%.1.gz : %.1
+	gzip -c -9 $< > $@
 
 profiled :
 	make CCFLAGS="$(CCFLAGS) -fprofile-generate" LDFLAGS="$(LDFLAGS) -fprofile-generate" $(EXEC)
@@ -31,7 +36,11 @@ profiled :
 	make CCFLAGS="$(CCFLAGS) -fprofile-use" LDFLAGS="$(LDFLAGS) -fprofile-use" $(EXEC)
 	-rm -f $(OBJS) *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock
 
-man : telxcc.1.gz
+install : strip man
+	sudo cp telxcc /usr/local/bin
+	sudo mkdir -p /usr/local/share/man/man1
+	sudo cp telxcc.1.gz /usr/local/share/man/man1
 
-%.1.gz : %.1
-	gzip -c -9 $< > $@
+uninstall :
+	sudo rm /usr/local/bin/telxcc
+	sudo rm /usr/local/share/man/man1/telxcc.1.gz
