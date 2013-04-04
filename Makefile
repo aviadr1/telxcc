@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic
+CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic -fno-stack-protector
 LD = ld
 LDFLAGS =
 
@@ -15,7 +15,7 @@ man : telxcc.1.gz
 
 .PHONY : clean
 clean :
-	-rm -f $(OBJS) $(EXEC)
+	-rm -f $(OBJS) $(EXEC) *.1.gz
 
 $(EXEC) : $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)

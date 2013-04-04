@@ -12,7 +12,7 @@ strip : $(EXEC)
 
 .PHONY : clean
 clean :
-	-del $(OBJS) $(EXEC)
+	-del $(OBJS) $(EXEC) *.1.gz
 
 $(EXEC) : $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LDFLAGS)

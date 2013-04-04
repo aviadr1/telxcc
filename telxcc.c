@@ -64,8 +64,6 @@ ISO/IEC STANDARD 6937 Third edition (2001-12-15)
 Werner Brückner -- Teletext in digital television
 */
 
-#define _POSIX_C_SOURCE 200112L
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,7 +75,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define TELXCC_VERSION "2.4.2"
+#define TELXCC_VERSION "2.4.3"
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
