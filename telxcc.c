@@ -36,6 +36,7 @@ Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and co
 traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
 Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
 Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS sample and assistance with Polish language
+Jeremy Tan <caketrim@users.sourceforge.net> for Hamming 24/18 bug fix and nice minimal implementation!
 
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
@@ -283,6 +284,7 @@ static inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element
 uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
+		t = 0;
 		VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM8/4(%02x)\n", a);
 	}
 	return (r & 0x0f);
