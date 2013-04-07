@@ -290,17 +290,28 @@ uint8_t unham_8_4(uint8_t a) {
 
 // ETS 300 706, chapter 8.3
 uint32_t unham_24_18(uint32_t a) {
-	uint8_t B0 = a & 0xff;
-	uint8_t B1 = (a >> 8) & 0xff;
-	uint8_t B2 = (a >> 16) & 0xff;
+	uint8_t tests = __builtin_parity(a & 0x00555555) |
+		__builtin_parity(a & 0x00666666) << 1 |
+		__builtin_parity(a & 0x00787878) << 2 |
+		__builtin_parity(a & 0x00007f80) << 3 |
+		__builtin_parity(a & 0x007f8000) << 4 |
+		__builtin_parity(a & 0x00ffffff) << 5;
 
-	uint8_t D1_D4 = UNHAM_24_18_D1_D4[B0 >> 2];
-	uint8_t D5_D11 = B1 & 0x7f;
-	uint8_t D12_D18 = B2 & 0x7f;
+	if ((tests & 0x1f) != 0x1f) {
+		if ((tests & 0x20) == 0x20) {
+			// Double Error: Reject data bits
+			return 0xffffffff;
+		}
+		else {
+			// Single Error: Complement bit in error
+			a ^= (1 << (~tests & 0x1f)) >> 1;
+		}
+	}
 
-	uint32_t d = D1_D4 | (D5_D11 << 4) | (D12_D18 << 11);
-	uint8_t ABCDEF = UNHAM_24_18_PAR[0][B0] ^ UNHAM_24_18_PAR[1][B1] ^ UNHAM_24_18_PAR[2][B2];
-	uint32_t r = d ^ UNHAM_24_18_ERR[ABCDEF];
+	uint32_t r = (a & 0x000004) >> 2 |
+		(a & 0x000070) >> 3 |
+		(a & 0x007f00) >> 4 |
+		(a & 0x7f0000) >> 5;
 
 	return r;
 }
@@ -597,7 +608,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 		for (uint8_t i = 1, j = 0; i < 40; i += 3, j++) triplets[j] = unham_24_18((packet->data[i + 2] << 16) | (packet->data[i + 1] << 8) | packet->data[i]);
 
 		for (uint8_t j = 0; j < 13; j++) {
-			if ((triplets[j] & 0x80000000) > 0) {
+			if (triplets[j] == 0xffffffff) {
 				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplets[j]);
 				continue;
@@ -646,7 +657,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			// ETS 300 706, chapter 9.4.7: Packet X/28/4
 			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-			if ((triplet0 & 0x80000000) > 0) {
+			if (triplet0 == 0xffffffff) {
 				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
 			}
@@ -668,7 +679,7 @@ void process_telx_packet(data_unit_t data_unit_id, teletext_packet_payload_t *pa
 			// ETS 300 706, chapter 9.5.3: Packet M/29/4
 			uint32_t triplet0 = unham_24_18((packet->data[3] << 16) | (packet->data[2] << 8) | packet->data[1]);
 
-			if ((triplet0 & 0x80000000) > 0) {
+			if (triplet0 == 0xffffffff) {
 				// invalid data (HAM24/18 uncorrectable error detected), skip group
 				VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM24/18()=%04x\n", triplet0);
 			}
