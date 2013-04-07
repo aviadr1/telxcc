@@ -284,7 +284,7 @@ static inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element
 uint8_t unham_8_4(uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
-		t = 0;
+		r = 0;
 		VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; UNHAM8/4(%02x)\n", a);
 	}
 	return (r & 0x0f);
@@ -292,12 +292,12 @@ uint8_t unham_8_4(uint8_t a) {
 
 // ETS 300 706, chapter 8.3
 uint32_t unham_24_18(uint32_t a) {
-	uint8_t tests = __builtin_parity(a & 0x00555555) |
-		__builtin_parity(a & 0x00666666) << 1 |
-		__builtin_parity(a & 0x00787878) << 2 |
-		__builtin_parity(a & 0x00007f80) << 3 |
-		__builtin_parity(a & 0x007f8000) << 4 |
-		__builtin_parity(a & 0x00ffffff) << 5;
+	uint8_t tests = __builtin_parityll(a & 0x00555555) |
+		__builtin_parityll(a & 0x00666666) << 1 |
+		__builtin_parityll(a & 0x00787878) << 2 |
+		__builtin_parityll(a & 0x00007f80) << 3 |
+		__builtin_parityll(a & 0x007f8000) << 4 |
+		__builtin_parityll(a & 0x00ffffff) << 5;
 
 	if ((tests & 0x1f) != 0x1f) {
 		if ((tests & 0x20) == 0x20) {
