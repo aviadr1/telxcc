@@ -292,30 +292,24 @@ uint8_t unham_8_4(uint8_t a) {
 
 // ETS 300 706, chapter 8.3
 uint32_t unham_24_18(uint32_t a) {
-	uint8_t tests = __builtin_parityll(a & 0x00555555) |
-		__builtin_parityll(a & 0x00666666) << 1 |
-		__builtin_parityll(a & 0x00787878) << 2 |
-		__builtin_parityll(a & 0x00007f80) << 3 |
-		__builtin_parityll(a & 0x007f8000) << 4 |
-		__builtin_parityll(a & 0x00ffffff) << 5;
+	uint8_t test = 0;
 
-	if ((tests & 0x1f) != 0x1f) {
-		if ((tests & 0x20) == 0x20) {
-			// Double Error: Reject data bits
+	//Tests A-F correspond to bits 0-6 respectively in 'test'.
+	for (uint8_t i = 0; i < 23; i++) test ^= ((a >> i) & 0x01) * (i + 33);
+	//Only parity bit is tested for bit 24
+	test ^= ((a >> 23) & 0x01) * 32;
+
+	if ((test & 0x1f) != 0x1f) {
+		//Not all tests A-E correct
+		if (test & 0x20) {
+			//F correct: Double error
 			return 0xffffffff;
 		}
-		else {
-			// Single Error: Complement bit in error
-			a ^= (1 << (~tests & 0x1f)) >> 1;
-		}
+		//Test F incorrect: Single error
+		a ^= 1 << (30 - test);
 	}
 
-	uint32_t r = (a & 0x000004) >> 2 |
-		(a & 0x000070) >> 3 |
-		(a & 0x007f00) >> 4 |
-		(a & 0x7f0000) >> 5;
-
-	return r;
+	return (a & 0x000004) >> 2 | (a & 0x000070) >> 3 | (a & 0x007f00) >> 4 | (a & 0x7f0000) >> 5;
 }
 
 void remap_g0_charset(uint8_t c) {
