@@ -301,7 +301,7 @@ uint32_t unham_24_18(uint32_t a) {
 
 	if ((test & 0x1f) != 0x1f) {
 		//Not all tests A-E correct
-		if (test & 0x20) {
+		if ((test & 0x20) == 0x20) {
 			//F correct: Double error
 			return 0xffffffff;
 		}
@@ -946,8 +946,8 @@ int main(const int argc, char *argv[]) {
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal donation to support our free GNU/GPL software:\n");
-	fprintf(stderr, "http://fore.rs/donate/telxcc\n");
+	fprintf(stderr, "Please consider making a Paypal/Flattr donation to support our free GNU/GPL software:\n");
+	fprintf(stderr, "http://fore.rs/donate/telxcc or http://fore.rs/flattr/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
