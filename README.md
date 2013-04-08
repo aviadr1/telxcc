@@ -2,6 +2,8 @@
 
 telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS) into SubRip text files (SRT).
 
+[![Flattr this git repository](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=forers&url=https://github.com/forers/telxcc&title=telxcc&tags=github&category=software)
+
 telxcc is:
 
 * tiny and lightweight (few KiBs binary, no lib dependencies)
@@ -69,7 +71,9 @@ and it is also already prepared for arabic and hebrew scripts (no such TS sample
 ## Pricing and Support
 
 telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.* 
+
 If you like telxcc and use it, please let us know, it motivates us in further development.
+
 Important: telxcc will *never ever* be like Emacs; it is simple and specialized utility. Do you need another output format? Just transform current one. Is online/realtime processing over TCP/IP required? I suggest Node.js as a wrapper…
 
 
