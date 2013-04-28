@@ -1,43 +1,5 @@
 /*!
-(c) 2011-2013 Petr Kutalek, Forers, s. r. o.: telxcc
-
-Some portions/inspirations:
-(c) 2007 Vincent Penne, telx.c: Minimalistic Teletext subtitles decoder
-(c) 2001-2005 by dvb.matt, ProjectX java dvb decoder
-(c) Dave Chapman <dave@dchapman.com> 2003-2004, dvbtextsubs
-(c) Ralph Metzler, DVB driver, vbidecode
-(c) Jan Pantelje, submux-dvd
-(c) Ragnar Sundblad, dvbtextsubs, VDR teletext subtitles plugin
-(c) Scott T. Smith, dvdauthor
-(c) 2007 Vladimir Voroshilov <voroshil@gmail.com>, mplayer
-(c) 2001, 2002, 2003, 2004, 2007 Michael H. Schimek, libzvbi -- Error correction functions
-
-
-This program is free software; you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation; either version 2 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
-
-
-I would like to thank:
-David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegian TS samples and patient testing
-Professor Francis F Steen and his team from UCLA for contribution
-Laurent Debacker (https://github.com/debackerl) for bug fixes
-Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
-traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
-Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
-Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS sample and assistance with Polish language
-Jeremy Tan <caketrim@users.sourceforge.net> for Hamming 24/18 bug fix and nice minimal implementation!
-
+(c) 2011-2013 Forers, s. r. o.: telxcc
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
 characterised by the use of spacing attributes only and a limited alphanumeric and mosaics repertoire.
@@ -945,9 +907,8 @@ int main(const int argc, char *argv[]) {
 	int ret = EXIT_FAILURE;
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
-	fprintf(stderr, "(c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a Paypal/Flattr donation to support our free GNU/GPL software:\n");
-	fprintf(stderr, "http://fore.rs/donate/telxcc or http://fore.rs/flattr/telxcc\n");
+	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
+	fprintf(stderr, "Please consider making a donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
 	fprintf(stderr, "\n");
 

@@ -63,9 +63,9 @@ and it is also already prepared for arabic and hebrew scripts (no such TS sample
 
 ## Compiled binaries and other downloads
 
-* [telxcc v2.4.2 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.2.zip.asc))
-* [telxcc v2.4.2 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.2.zip.asc))
-* [telxcc v2.4.2 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.2.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.2.zip.asc))
+* [telxcc v2.4.3 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.3.zip.asc))
+* [telxcc v2.4.3 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.3.zip.asc))
+* [telxcc v2.4.3 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.3.zip.asc))
 
 
 ## Pricing and Support
@@ -112,9 +112,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software:
-    http://fore.rs/donate/telxcc
+    (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
+    Please consider making a donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
     Version 2.4.2 (Built on Mar 31 2013)
     
     Usage: ./telxcc [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
@@ -141,9 +140,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc < TVP.ts > TVP.srt ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Petr Kutalek <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Please consider making a Paypal donation to support our free GNU/GPL software:
-    http://fore.rs/donate/telxcc
+    (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
+    Please consider making a donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
     Version 2.4.2 (Built on Mar 31 2013)
     
     - Found VBI/teletext stream ID 205 (0xcd) for SID 45 (0x2d)
