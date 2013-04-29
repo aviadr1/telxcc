@@ -38,7 +38,7 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define TELXCC_VERSION "2.4.3"
+#define TELXCC_VERSION "2.4.4"
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
