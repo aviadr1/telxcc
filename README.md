@@ -64,8 +64,8 @@ and it is also already prepared for arabic and hebrew scripts (no such TS sample
 ## Compiled binaries and other downloads
 
 * [telxcc v2.4.3 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.4.3.zip.asc))
-* [telxcc v2.4.3 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86-v2.4.3.zip.asc))
-* [telxcc v2.4.3 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86-v2.4.3.zip.asc))
+* [telxcc v2.4.3 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.4.3.zip.asc))
+* [telxcc v2.4.3 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.4.3.zip.asc))
 
 
 ## Pricing and Support
