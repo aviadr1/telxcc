@@ -38,6 +38,12 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
+#ifdef I18N
+#include <libintl.h>
+#include <locale.h>
+#define _(STRING) gettext(STRING)
+#endif
+
 #define TELXCC_VERSION "2.4.4"
 
 #ifdef __MINGW32__
@@ -905,6 +911,12 @@ void signal_handler(int sig) {
 
 int main(const int argc, char *argv[]) {
 	int ret = EXIT_FAILURE;
+
+#ifdef I18N
+	setlocale(LC_ALL, "");
+	bindtextdomain("telxcc", "/usr/share/locale");
+	textdomain("telxcc");
+#endif
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
