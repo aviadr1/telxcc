@@ -1,7 +1,5 @@
 # telxcc
 
-[.](https://forers.com/tmp/empty.gif)
-
 telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS) into SubRip text files (SRT).
 
 [![Flattr this git repository](http://api.flattr.com/button/flattr-badge-large.png)](https://flattr.com/submit/auto?user_id=forers&url=https://github.com/forers/telxcc&title=telxcc&tags=github&category=software)
@@ -158,3 +156,5 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ _
 
+
+[](https://forers.com/tmp/empty.gif)
