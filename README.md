@@ -157,6 +157,4 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     $ _
 
 
-## Service Info
-
-![analytics code](https://forers.com/tmp/empty.gif)
+![-](https://forers.com/tmp/empty.gif)
