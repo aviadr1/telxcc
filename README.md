@@ -2,9 +2,6 @@
 
 telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS) into SubRip text files (SRT).
 
-[![Paypal donation](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](http://fore.rs/donate/telxcc)
-[![Flattr this git repository](http://api.flattr.com/button/flattr-badge-large.png)](http://fore.rs/flattr/telxcc)
-
 telxcc is:
 
 * tiny and lightweight (few KiBs binary, no lib dependencies)
@@ -68,8 +65,10 @@ and it is also already prepared for arabic and hebrew scripts (no such TS sample
 * [telxcc v2.4.3 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.4.3.zip.asc))
 * [telxcc v2.4.3 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.4.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.4.3.zip.asc))
 
-
 ## Pricing and Support
+
+[![Paypal donation](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](http://fore.rs/donate/telxcc)
+[![Flattr this git repository](http://api.flattr.com/button/flattr-badge-large.png)](http://fore.rs/flattr/telxcc)
 
 telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](http://fore.rs/donate/telxcc). Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.* 
 
