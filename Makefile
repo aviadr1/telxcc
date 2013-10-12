@@ -32,6 +32,7 @@ profiled :
 	find . -type f -iname \*.ts -exec sh -c './telxcc -s -v -p 888 < "{}" > /dev/null 2>> profile.log' \;
 	find . -type f -iname \*.ts -exec sh -c './telxcc -1 -v -t 8192 -p 777 < "{}" > /dev/null 2>> profile.log' \;
 	find . -type f -iname \*.ts -exec sh -c './telxcc < "{}" > /dev/null 2>> profile.log' \;
+	find . -type f -iname \*.m2ts -exec sh -c './telxcc -1 -v -m -c < "{}" > /dev/null 2>> profile.log' \;
 	make clean
 	make CCFLAGS="$(CCFLAGS) -fprofile-use" LDFLAGS="$(LDFLAGS) -fprofile-use" $(EXEC)
 	-rm -f $(OBJS) *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock

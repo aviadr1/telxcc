@@ -1,6 +1,6 @@
 # telxcc
 
-telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS) into SubRip text files (SRT).
+telxcc is utility extracting teletext Closed Captions from Transport Stream binary files (TS & M2TS) into SubRip text files (SRT).
 
 telxcc is:
 
@@ -8,7 +8,7 @@ telxcc is:
 * easy to use
 * open-source
 * multiplatform (Mac, Windows and Linux @ x86, ARM etc.)
-* modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5/2.5)
+* modern (fully supports UTF-8, colours in SRT files, conforms to ETSI 300 706 Presentation Level 1.5/2.5, able to process TS and M2TS)
 * stable
 * secure (does not require any escalated privileges)
 * high performing (even SSD is the bottleneck)
@@ -120,9 +120,9 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
     (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Version 2.4.2 (Built on Mar 31 2013)
+    Version 2.5.1 (Built on Oct 12 2013)
     
-    Usage: ./telxcc [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
+    Usage: telxcc [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
       -i INPUT    transport stream (- = STDIN, default STDIN)
       -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)
       -h          this help text
@@ -134,9 +134,11 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -n          do not print UTF-8 BOM characters to the file
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
+      -F FORMAT   //FIXME
       -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
                   if REF (unix timestamp) is omitted, use current system time,
-                  telxcc will automatically switch to transport stream UTC timestamps when available    
+                  telxcc will automatically switch to transport stream UTC timestamps when available
+      -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)
 
 
     $ man ./telxcc.1 ↵
@@ -147,7 +149,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
     $ ./telxcc < TVP.ts > TVP.srt ↵
     telxcc - TELeteXt Closed Captions decoder
     (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Version 2.4.2 (Built on Mar 31 2013)
+    Version 2.5.1 (Built on Oct 12 2013)
     
     - Found VBI/teletext stream ID 205 (0xcd) for SID 45 (0x2d)
     - PID 0xbd PTS available
