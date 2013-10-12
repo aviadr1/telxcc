@@ -1,4 +1,4 @@
-.TH telxcc 1 "May 2013" "version 2.4.4"
+.TH telxcc 1 "October 2013" "version 2.5.1"
 
 .SH NAME
 .B telxcc
@@ -70,6 +70,8 @@ If
 value (unix timestamp, integer) is omitted, use current system time.
 .B telxcc
 will automatically switch to transport stream UTC timestamps when available.
+.IP "\-m"
+input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)
 
 .SH "EXIT STATUS"
 .B telxcc
@@ -90,7 +92,6 @@ will extract CCs from TS file SWR_PID-804_PAGE-150.ts. All options will be autod
 .nf
 telxcc - TELeteXt Closed Captions decoder
 (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
-Please consider making a donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc
 Version 2.4.0 (Built on Feb  5 2013)
 
 - Found VBI/teletext stream ID 804 (0x324) for SID 28113 (0x6dd1)
@@ -113,8 +114,6 @@ Bug reports can be seen and new bugs could be reported at https://github.com/for
 has been written by Petr Kutalek from
 .B Forers, s. r. o.,
 company <info@forers.com>.
-Please consider making a donation to support our free GNU/GPL software:
-.I http://fore.rs/donate/telxcc
 
 .SH COPYRIGHT
 Licensed under the GPL.
@@ -148,8 +147,6 @@ David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegi
 .br
 Professor Francis F Steen and his team from UCLA for contribution
 .br
-Laurent Debacker (https://github.com/debackerl) for bug fixes
-.br
 Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and contribution
 .br
 traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
@@ -157,8 +154,6 @@ traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian T
 Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
 .br
 Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS sample and assistance with Polish language
-.br
-Jeremy Tan <caketrim@users.sourceforge.net> for Hamming 24/18 bug fix and it's nice minimal implementation!
 
 .SH WWW
 https://github.com/forers/telxcc

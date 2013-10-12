@@ -44,7 +44,7 @@ Werner Brückner -- Teletext in digital television
 #define _(STRING) gettext(STRING)
 #endif
 
-#define TELXCC_VERSION "2.4.4"
+#define TELXCC_VERSION "2.5.1"
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
@@ -65,11 +65,11 @@ typedef enum {
 	UNDEF = 0xff
 } bool_t;
 
-// size of a TS packet in bytes
-#define TS_PACKET_SIZE 188
+// size of a (M2)TS packet in bytes (TS = 188, M2TS = 192)
+#define TS_PACKET_SIZE 192
 
 // size of a TS packet payload in bytes
-#define TS_PACKET_PAYLOAD_SIZE (TS_PACKET_SIZE - 4)
+#define TS_PACKET_PAYLOAD_SIZE 184
 
 // size of a packet payload buffer
 #define PAYLOAD_BUFFER_SIZE 4096
@@ -161,9 +161,27 @@ struct {
 	uint8_t colours; // output <font...></font> tags
 	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
 	uint8_t nonempty; // produce at least one (dummy) frame
-	uint8_t se_mode; // search engine compatible mode
 	uint64_t utc_refvalue; // UTC referential value
-} config = { NULL, NULL, NO, 0, 0, 0, NO, NO, NO, NO, 0 };
+	uint8_t se_mode;
+	char *template; // output format template
+	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
+} config = { NULL, NULL, NO, 0, 0, 0, NO, NO, NO, 0, NO, NULL, NO };
+
+/*
+formatting template:
+	%f -- from timestamp (absolute, UTC)
+	%t -- to timestamp (absolute, UTC)
+	%F -- from time (SRT)
+	%T -- to time (SRT)
+	%g -- from timestamp (relative)
+	%u -- to timestamp (relative)
+	%c -- counter 0-based
+	%C -- counter 1-based
+	%s -- subtitles
+	%l -- subtitles (lines)
+	%p -- page number
+	%i -- stream ID
+*/
 
 FILE *fin = NULL;
 FILE *fout = NULL;
@@ -309,18 +327,20 @@ void ucs2_to_utf8(char *r, uint16_t ch) {
 		r[0] = ch & 0x7f;
 		r[1] = 0;
 		r[2] = 0;
+		r[3] = 0;
 	}
 	else if (ch < 0x800) {
 		r[0] = (ch >> 6) | 0xc0;
 		r[1] = (ch & 0x3f) | 0x80;
 		r[2] = 0;
+		r[3] = 0;
 	}
 	else {
 		r[0] = (ch >> 12) | 0xe0;
 		r[1] = ((ch >> 6) & 0x3f) | 0x80;
 		r[2] = (ch & 0x3f) | 0x80;
+		r[3] = 0;
 	}
-	r[3] = 0;
 }
 
 // check parity and translate any reasonable teletext character into ucs2
@@ -920,7 +940,6 @@ int main(const int argc, char *argv[]) {
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
-	fprintf(stderr, "Please consider making a donation to support our free GNU/GPL software: http://fore.rs/donate/telxcc\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
@@ -942,9 +961,11 @@ int main(const int argc, char *argv[]) {
 			fprintf(stderr, "  -n          do not print UTF-8 BOM characters to the file\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
+			fprintf(stderr, "  -F FORMAT   //FIXME\n");
 			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
 			fprintf(stderr, "              if REF (unix timestamp) is omitted, use current system time,\n");
 			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
+			fprintf(stderr, "  -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)\n");
 			fprintf(stderr, "\n");
 			ret = EXIT_SUCCESS;
 			goto fail;
@@ -973,6 +994,9 @@ int main(const int argc, char *argv[]) {
 		else if (strcmp(argv[i], "-c") == 0) {
 			config.colours = YES;
 		}
+		else if ((strcmp(argv[i], "-F") == 0) && (argc > i + 1)) {
+			//FIXME
+		}
 		else if (strcmp(argv[i], "-v") == 0) {
 			config.verbose = YES;
 		}
@@ -988,6 +1012,9 @@ int main(const int argc, char *argv[]) {
 				t = time(&now);
 			}
 			config.utc_refvalue = t;
+		}
+		else if (strcmp(argv[i], "-m") == 0) {
+			config.m2ts = YES;
 		}
 		else {
 			fprintf(stderr, "! Unknown option %s\n", argv[i]);
@@ -1015,6 +1042,10 @@ int main(const int argc, char *argv[]) {
 		}
 	}
 #endif
+
+	if (config.m2ts == YES) {
+		fprintf(stderr, "- Processing input stream as a BDAV MPEG-2 Transport Stream\n");
+	}
 
 	if (config.se_mode == YES) {
 		time_t t0 = (time_t)config.utc_refvalue;
@@ -1084,9 +1115,19 @@ int main(const int argc, char *argv[]) {
 	uint32_t packet_counter = 0;
 
 	// TS packet buffer
-	uint8_t ts_buffer[TS_PACKET_SIZE] = { 0 };
+	uint8_t ts_packet_buffer[TS_PACKET_SIZE] = { 0 };
+	uint8_t ts_packet_size = TS_PACKET_SIZE - 4;
 
-	// 255 means not set yet
+	// pointer to TS packet buffer start
+	uint8_t *ts_packet = &ts_packet_buffer[0];
+
+	// if telxcc is configured to be in M2TS mode, it reads larger packets and ignores first 4 bytes
+	if (config.m2ts == YES) {
+		ts_packet_size = TS_PACKET_SIZE;
+		ts_packet = &ts_packet_buffer[4];
+	}
+
+	// 0xff means not set yet
 	uint8_t continuity_counter = 255;
 
 	// PES packet buffer
@@ -1094,40 +1135,38 @@ int main(const int argc, char *argv[]) {
 	uint16_t payload_counter = 0;
 
 	// reading input
-	while ((exit_request == NO) && (fread(&ts_buffer, 1, TS_PACKET_SIZE, fin) == TS_PACKET_SIZE)) {
+	while ((exit_request == NO) && (fread(&ts_packet_buffer, 1, ts_packet_size, fin) == ts_packet_size)) {
 		// not TS packet -- misaligned?
-		if (ts_buffer[0] != 0x47) {
+		if (ts_packet[0] != 0x47) {
 			fprintf(stderr, "! Invalid TS packet header; TS seems to be misaligned\n");
 
-			for (uint16_t shift = 1; shift < TS_PACKET_SIZE; shift++) {
-				if (ts_buffer[shift]  == 0x47) {
-					VERBOSE_ONLY fprintf(stderr, "! TS-packet-header-like byte found shifted by %"PRIu16" bytes, aligning TS stream (at least one TS packet lost)\n", shift);
+			uint16_t shift = 0;
+			for (shift = 1; shift < TS_PACKET_SIZE; shift++) if (ts_packet[shift] == 0x47) break;
 
-					for (uint16_t i = shift; i < TS_PACKET_SIZE; i++) ts_buffer[i - shift] = ts_buffer[i];
-					fread(&ts_buffer[TS_PACKET_SIZE - shift], 1, shift, fin);
-
-					break;
-				}
+			if (shift < TS_PACKET_SIZE) {
+				VERBOSE_ONLY fprintf(stderr, "! TS-packet-header-like byte found shifted by %"PRIu16" bytes, aligning TS stream (at least one TS packet lost)\n", shift);
+				for (uint16_t i = shift; i < TS_PACKET_SIZE; i++) ts_packet[i - shift] = ts_packet[i];
+				fread(&ts_packet[TS_PACKET_SIZE - shift], 1, shift, fin);
 			}
 		}
 
 		// Transport Stream Header
-		// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)buffer;)
+		// We do not use buffer to struct loading (e.g. ts_packet_t *header = (ts_packet_t *)ts_packet;)
 		// -- struct packing is platform dependant and not performing well.
 		ts_packet_t header = { 0 };
-		header.sync = ts_buffer[0];
-		header.transport_error = (ts_buffer[1] & 0x80) >> 7;
-		header.payload_unit_start = (ts_buffer[1] & 0x40) >> 6;
-		header.transport_priority = (ts_buffer[1] & 0x20) >> 5;
-		header.pid = ((ts_buffer[1] & 0x1f) << 8) | ts_buffer[2];
-		header.scrambling_control = (ts_buffer[3] & 0xc0) >> 6;
-		header.adaptation_field_exists = (ts_buffer[3] & 0x20) >> 5;
-		header.continuity_counter = ts_buffer[3] & 0x0f;
-		//uint8_t ts_payload_exists = (ts_buffer[3] & 0x10) >> 4;
+		header.sync = ts_packet[0];
+		header.transport_error = (ts_packet[1] & 0x80) >> 7;
+		header.payload_unit_start = (ts_packet[1] & 0x40) >> 6;
+		header.transport_priority = (ts_packet[1] & 0x20) >> 5;
+		header.pid = ((ts_packet[1] & 0x1f) << 8) | ts_packet[2];
+		header.scrambling_control = (ts_packet[3] & 0xc0) >> 6;
+		header.adaptation_field_exists = (ts_packet[3] & 0x20) >> 5;
+		header.continuity_counter = ts_packet[3] & 0x0f;
+		//uint8_t ts_payload_exists = (ts_packet[3] & 0x10) >> 4;
 
 		uint8_t af_discontinuity = 0;
 		if (header.adaptation_field_exists > 0) {
-			af_discontinuity = (ts_buffer[5] & 0x80) >> 7;
+			af_discontinuity = (ts_packet[5] & 0x80) >> 7;
 		}
 
 		// uncorrectable error?
@@ -1139,17 +1178,17 @@ int main(const int argc, char *argv[]) {
 		// if available, calculate current PCR
 		if (header.adaptation_field_exists > 0) {
 			// PCR in adaptation field
-			uint8_t af_pcr_exists = (ts_buffer[5] & 0x10) >> 4;
+			uint8_t af_pcr_exists = (ts_packet[5] & 0x10) >> 4;
 			if (af_pcr_exists > 0) {
-				uint64_t pts = ts_buffer[6];
+				uint64_t pts = ts_packet[6];
 				pts <<= 25;
-				pts |= (ts_buffer[7] << 17);
-				pts |= (ts_buffer[8] << 9);
-				pts |= (ts_buffer[9] << 1);
-				pts |= (ts_buffer[10] >> 7);
+				pts |= (ts_packet[7] << 17);
+				pts |= (ts_packet[8] << 9);
+				pts |= (ts_packet[9] << 1);
+				pts |= (ts_packet[10] >> 7);
 				global_timestamp = pts / 90;
-				pts = ((ts_buffer[10] & 0x01) << 8);
-				pts |= ts_buffer[11];
+				pts = ((ts_packet[10] & 0x01) << 8);
+				pts |= ts_packet[11];
 				global_timestamp += pts / 27000;
 			}
 		}
@@ -1161,13 +1200,13 @@ int main(const int argc, char *argv[]) {
 		if (config.tid == 0) {
 			// process PAT
 			if (header.pid == 0x0000) {
-				analyze_pat(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
+				analyze_pat(&ts_packet[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
 
 			// process PMT
 			if (in_array(pmt_map, pmt_map_count, header.pid) == YES) {
-				analyze_pmt(&ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
+				analyze_pmt(&ts_packet[4], TS_PACKET_PAYLOAD_SIZE);
 				continue;
 			}
 		}
@@ -1176,8 +1215,8 @@ int main(const int argc, char *argv[]) {
 		if (config.tid == 0x2000) {
 			if (header.payload_unit_start > 0) {
 				// searching for PES header and "Private Stream 1" stream_id
-				uint64_t pes_prefix = (ts_buffer[4] << 16) | (ts_buffer[5] << 8) | ts_buffer[6];
-				uint8_t pes_stream_id = ts_buffer[7];
+				uint64_t pes_prefix = (ts_packet[4] << 16) | (ts_packet[5] << 8) | ts_packet[6];
+				uint8_t pes_stream_id = ts_packet[7];
 
 				if ((pes_prefix == 0x000001) && (pes_stream_id == 0xbd)) {
 					config.tid = header.pid;
@@ -1213,7 +1252,7 @@ int main(const int argc, char *argv[]) {
 
 			// add payload data to buffer
 			if (payload_counter < (PAYLOAD_BUFFER_SIZE - TS_PACKET_PAYLOAD_SIZE)) {
-				memcpy(&payload_buffer[payload_counter], &ts_buffer[4], TS_PACKET_PAYLOAD_SIZE);
+				memcpy(&payload_buffer[payload_counter], &ts_packet[4], TS_PACKET_PAYLOAD_SIZE);
 				payload_counter += TS_PACKET_PAYLOAD_SIZE;
 				packet_counter++;
 			}
