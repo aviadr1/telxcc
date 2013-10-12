@@ -163,9 +163,9 @@ struct {
 	uint8_t nonempty; // produce at least one (dummy) frame
 	uint64_t utc_refvalue; // UTC referential value
 	uint8_t se_mode;
-	char *template; // output format template
+	//char *template; // output format template
 	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
-} config = { NULL, NULL, NO, 0, 0, 0, NO, NO, NO, 0, NO, NULL, NO };
+} config = { NULL, NULL, NO, 0, 0, 0, NO, NO, NO, 0, NO, /*NULL,*/ NO };
 
 /*
 formatting template:
@@ -961,7 +961,7 @@ int main(const int argc, char *argv[]) {
 			fprintf(stderr, "  -n          do not print UTF-8 BOM characters to the file\n");
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
-			fprintf(stderr, "  -F FORMAT   //FIXME\n");
+			//fprintf(stderr, "  -F FORMAT   //FIXME\n");
 			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
 			fprintf(stderr, "              if REF (unix timestamp) is omitted, use current system time,\n");
 			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
@@ -994,9 +994,9 @@ int main(const int argc, char *argv[]) {
 		else if (strcmp(argv[i], "-c") == 0) {
 			config.colours = YES;
 		}
-		else if ((strcmp(argv[i], "-F") == 0) && (argc > i + 1)) {
-			//FIXME
-		}
+		//else if ((strcmp(argv[i], "-F") == 0) && (argc > i + 1)) {
+		//	//FIXME
+		//}
 		else if (strcmp(argv[i], "-v") == 0) {
 			config.verbose = YES;
 		}

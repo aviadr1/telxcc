@@ -61,9 +61,7 @@ and it is also already prepared for arabic and hebrew scripts (no such TS sample
 
 ## Pricing and Support
 
-[![Paypal donation](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr&cmd=_donations&business=PZ2CMLKG9HS6N&item_name=telxcc+donation&no_shipping=1&currency_code=USD)
-
-telxcc is free GNU/GPL-licensed software. However if you use it, please consider making a [Paypal donation](https://www.paypal.com/cgi-bin/webscr&cmd=_donations&business=PZ2CMLKG9HS6N&item_name=telxcc+donation&no_shipping=1&currency_code=USD). Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.* 
+telxcc is free GNU/GPL-licensed software. Any bug reports, or TS sample files are very welcome. *Unfortunately we are unable to provide you with free support.* 
 
 If you like telxcc and use it, please let us know, it motivates us in further development.
 
@@ -127,7 +125,6 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -n          do not print UTF-8 BOM characters to the file
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
-      -F FORMAT   //FIXME
       -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
                   if REF (unix timestamp) is omitted, use current system time,
                   telxcc will automatically switch to transport stream UTC timestamps when available
