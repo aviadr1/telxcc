@@ -59,13 +59,6 @@ telxcc also has limited/untested implementation of cyrillic and Greek alphabet f
 and it is also already prepared for arabic and hebrew scripts (no such TS samples are unfortunately available for testing).
 
 
-## Compiled binaries and other downloads
-
-* [telxcc v2.5.1 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.5.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.5.1.zip.asc))
-* [telxcc v2.5.1 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.5.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.5.1.zip.asc))
-* [telxcc v2.5.1 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.5.1.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.5.1.zip.asc))
-
-
 ## Pricing and Support
 
 [![Paypal donation](https://www.paypalobjects.com/en_US/i/btn/btn_donate_SM.gif)](https://www.paypal.com/cgi-bin/webscr&cmd=_donations&business=PZ2CMLKG9HS6N&item_name=telxcc+donation&no_shipping=1&currency_code=USD)
