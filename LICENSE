@@ -1,4 +1,4 @@
-(c) 2011-2013 Forers, s. r. o.: telxcc
+(c) 2011-2014 Forers, s. r. o.: telxcc
 
 Some portions/inspirations:
 (c) 2007 Vincent Penne, telx.c : Minimalistic Teletext subtitles decoder
@@ -15,7 +15,6 @@ Code contribution, bug fixes etc.:
 Laurent Debacker (https://github.com/debackerl)
 Jeremy Tan <caketrim@users.sourceforge.net>
 Thierry Lelegard <thierry@lelegard.fr>
-Jeremy Tan <caketrim@users.sourceforge.net>
 
 I would also like to thank:
 David Liontooth <lionteeth@cogweb.net> for providing me with Swedish and Norwegian TS samples and patient testing
@@ -24,8 +23,6 @@ Philip Klenk <philip.klenk@web.de> for providing me with German TS sample and co
 traveller fantasy <fantasytraveller@gmail.com> for providing me with Slovenian TS samples
 Karstein Eriksen <eriksenkarstein@gmail.com> for providing me with multilingual TS samples
 Piotr Oleszczyk <piotr.oleszczyk@gmail.com> for providing me with Polish TS sample and assistance with Polish language
-
-
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
 This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.

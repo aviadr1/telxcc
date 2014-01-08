@@ -1,5 +1,5 @@
 /*!
-(c) 2011-2013 Forers, s. r. o.: telxcc
+(c) 2011-2014 Forers, s. r. o.: telxcc
 
 telxcc conforms to ETSI 300 706 Presentation Level 1.5: Presentation Level 1 defines the basic Teletext page,
 characterised by the use of spacing attributes only and a limited alphanumeric and mosaics repertoire.
@@ -38,25 +38,20 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#ifdef I18N
-#include <libintl.h>
-#include <locale.h>
-#define _(STRING) gettext(STRING)
-#endif
-
-#define TELXCC_VERSION "2.5.1"
+#define TELXCC_VERSION "2.5.2"
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
 #include <fcntl.h>
 int _CRT_fmode = _O_BINARY;
-
-// for better UX in Windows we want to detect that app is not run by "double-clicking" in Explorer
 #define WIN32_LEAN_AND_MEAN
-#define _WIN32_WINNT 0x0502
 #define _WIN32_IE 0x0400
+#define ICC_STANDARD_CLASSES 0x00004000
 #include <windows.h>
+#include <shellapi.h>
 #include <commctrl.h>
+#include <wchar.h>
+#include <locale.h>
 #endif
 
 typedef enum {
@@ -929,17 +924,36 @@ void signal_handler(int sig) {
 	}
 }
 
-int main(const int argc, char *argv[]) {
+
+#ifdef __MINGW32__
+int main(void)
+#else
+int main(const int argc, char *argv[])
+#endif
+{
 	int ret = EXIT_FAILURE;
 
-#ifdef I18N
+#ifdef __MINGW32__
+	// On Windows converts all command line parameters from wide characters to multibyte.
 	setlocale(LC_ALL, "");
-	bindtextdomain("telxcc", "/usr/share/locale");
-	textdomain("telxcc");
+
+	int argc;
+	char **argv;
+
+	{
+		wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argc);
+		argv = (char **)calloc(argc, sizeof(char *));
+		for (int i = 0; i < argc; i++) {
+			size_t size = wcslen(argw[i]) + 1;
+			argv[i] = calloc(size, 1);
+			wcstombs(argv[i], argw[i], size); 
+		}
+		LocalFree(argw);
+	}
 #endif
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
-	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.\n");
+	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2014; Licensed under the GPL.\n");
 	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
 	fprintf(stderr, "\n");
 
@@ -1303,6 +1317,12 @@ fail:
 		fclose(fout);
 		fout = NULL;
 	}
+
+#ifdef __MINGW32__
+	// On Windows free argv -- it was allocated dynamically
+	for (int i = 0; i < argc; i++) free(argv[i]);
+	free(argv);
+#endif
 
 	return ret;
 }

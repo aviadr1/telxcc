@@ -1,5 +1,5 @@
 /*!
-(c) 2011-2013 Forers, s. r. o.: telxcc
+(c) 2011-2014 Forers, s. r. o.: telxcc
 */
 
 #ifndef teletext_h_included

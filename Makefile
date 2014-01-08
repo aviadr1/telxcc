@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic -fno-stack-protector
+CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic
 LD = ld
 LDFLAGS =
 
