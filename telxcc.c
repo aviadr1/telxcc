@@ -168,8 +168,8 @@ typedef struct {
 // application config global variable
 struct {
 #ifdef __MINGW32__
-	char16_t *input_name; // input file name (used on Windows, UNICODE)
-	char16_t *output_name; // output file name (used on Windows, UNICODE)
+	wchar_t *input_name; // input file name (used on Windows, UNICODE)
+	wchar_t *output_name; // output file name (used on Windows, UNICODE)
 #else
 	char *input_name; // input file name
 	char *output_name; // output file name
