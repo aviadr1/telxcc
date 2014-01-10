@@ -2,6 +2,7 @@ CC = gcc
 CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic
 LD = ld
 LDFLAGS =
+DEST = /usr/local
 
 OBJS = telxcc.o
 EXEC = telxcc
@@ -38,10 +39,10 @@ profiled :
 	-rm -f $(OBJS) *.gcda *.gcno *.dyn pgopti.dpi pgopti.dpi.lock
 
 install : strip man
-	sudo cp telxcc /usr/local/bin
-	sudo mkdir -p /usr/local/share/man/man1
-	sudo cp telxcc.1.gz /usr/local/share/man/man1
+	sudo cp telxcc $(DEST)/bin
+	sudo mkdir -p $(DEST)/share/man/man1
+	sudo cp telxcc.1.gz $(DEST)/share/man/man1
 
 uninstall :
-	sudo rm /usr/local/bin/telxcc
-	sudo rm /usr/local/share/man/man1/telxcc.1.gz
+	sudo rm $(DEST)/bin/telxcc
+	sudo rm $(DEST)/share/man/man1/telxcc.1.gz

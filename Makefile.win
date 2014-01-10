@@ -12,7 +12,7 @@ strip : $(EXEC)
 
 .PHONY : clean
 clean :
-	-del $(OBJS) $(EXEC) *.1.gz
+	-del $(OBJS) $(EXEC)
 
 $(EXEC) : $(OBJS)
 	$(CC) -o $@ $(OBJS) $(LDFLAGS)
@@ -22,8 +22,3 @@ $(EXEC) : $(OBJS)
 
 %.res : %.rc
 	windres -J rc -O coff -o $@ $<
-
-man : telxcc.1.gz
-
-%.1.gz : %.1
-	gzip -c -9 $< > $@

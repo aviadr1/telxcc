@@ -165,4 +165,4 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
 Drag and drop your .TS file onto the batch file extract-subtitles.cmd. A .SRT file with the same name as your video file should be created. (Thanks a lot for this hint Jeremy!)
 
-![-](https://forers.com/tmp/empty.gif)
+![.](https://forers.com/tmp/empty.gif)

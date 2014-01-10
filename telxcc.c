@@ -45,7 +45,7 @@ Werner Brückner -- Teletext in digital television
 #elif __linux__
 #define PLATFORM "Linux"
 #elif __APPLE__
-#define PLATFORM "OS X"
+#define PLATFORM "Apple"
 #elif __unix__
 #define PLATFORM "Unix"
 #elif __posix__
@@ -159,11 +159,17 @@ typedef struct {
 	uint8_t tainted; // 1 = text variable contains any data
 } teletext_page_t;
 
+typedef struct {
+	uint64_t show_timestamp; // show at timestamp (in ms)
+	uint64_t hide_timestamp; // hide at timestamp (in ms)
+	char *text;
+} frame_t;
+
 // application config global variable
 struct {
 #ifdef __MINGW32__
-	wchar_t *input_name; // input file name (used on Windows, UNICODE)
-	wchar_t *output_name; // output file name (used on Windows, UNICODE)
+	char16_t *input_name; // input file name (used on Windows, UNICODE)
+	char16_t *output_name; // output file name (used on Windows, UNICODE)
 #else
 	char *input_name; // input file name
 	char *output_name; // output file name
@@ -176,6 +182,7 @@ struct {
 	uint8_t bom; // print UTF-8 BOM characters at the beginning of output
 	uint8_t nonempty; // produce at least one (dummy) frame
 	uint64_t utc_refvalue; // UTC referential value
+	// FIXME: move SE_MODE to output module
 	uint8_t se_mode;
 	//char *template; // output format template
 	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
@@ -221,7 +228,10 @@ FILE *fout = NULL;
 struct {
 	uint8_t programme_info_processed;
 	uint8_t pts_initialized;
-} states = { NO, NO };
+} states = {
+	.programme_info_processed = NO,
+	.pts_initialized = NO
+};
 
 // SRT frames produced
 uint32_t frames_produced = 0;
@@ -310,18 +320,18 @@ uint8_t unham_8_4(uint8_t a) {
 uint32_t unham_24_18(uint32_t a) {
 	uint8_t test = 0;
 
-	//Tests A-F correspond to bits 0-6 respectively in 'test'.
+	// Tests A-F correspond to bits 0-6 respectively in 'test'.
 	for (uint8_t i = 0; i < 23; i++) test ^= ((a >> i) & 0x01) * (i + 33);
-	//Only parity bit is tested for bit 24
+	// Only parity bit is tested for bit 24
 	test ^= ((a >> 23) & 0x01) * 32;
 
 	if ((test & 0x1f) != 0x1f) {
-		//Not all tests A-E correct
+		// Not all tests A-E correct
 		if ((test & 0x20) == 0x20) {
-			//F correct: Double error
+			// F correct: Double error
 			return 0xffffffff;
 		}
-		//Test F incorrect: Single error
+		// Test F incorrect: Single error
 		a ^= 1 << (30 - test);
 	}
 
@@ -385,6 +395,7 @@ uint16_t telx_to_ucs2(uint8_t c) {
 	return r;
 }
 
+// FIXME: implement output modules (to support different formats, printf formatting etc)
 void process_page(teletext_page_t *page) {
 #ifdef DEBUG
 	for (uint8_t row = 1; row < 25; row++) {
