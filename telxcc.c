@@ -38,12 +38,27 @@ Werner Brückner -- Teletext in digital television
 #include "hamming.h"
 #include "teletext.h"
 
-#define TELXCC_VERSION "2.5.2"
+#define TELXCC_VERSION "2.5.3"
+
+#ifdef _WIN32
+#define PLATFORM "Windows"
+#elif __linux__
+#define PLATFORM "Linux"
+#elif __APPLE__
+#define PLATFORM "OS X"
+#elif __unix__
+#define PLATFORM "Unix"
+#elif __posix__
+#define PLATFORM "POSIX"
+#else
+#define PLATFORM "unknown platform"
+#endif
 
 #ifdef __MINGW32__
 // switch stdin and all normal files into binary mode -- needed for Windows
 #include <fcntl.h>
 int _CRT_fmode = _O_BINARY;
+
 #define WIN32_LEAN_AND_MEAN
 #define _WIN32_IE 0x0400
 #define ICC_STANDARD_CLASSES 0x00004000
@@ -51,7 +66,6 @@ int _CRT_fmode = _O_BINARY;
 #include <shellapi.h>
 #include <commctrl.h>
 #include <wchar.h>
-#include <locale.h>
 #endif
 
 typedef enum {
@@ -122,7 +136,7 @@ typedef enum {
 } transmission_mode_t;
 
 const char* TTXT_COLOURS[8] = {
-	//black,   red,       green,     yellow,    blue,      magenta,   cyan,      white
+	//black,     red,       green,     yellow,    blue,      magenta,   cyan,      white
 	"#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
 };
 
@@ -147,8 +161,13 @@ typedef struct {
 
 // application config global variable
 struct {
+#ifdef __MINGW32__
+	wchar_t *input_name; // input file name (used on Windows, UNICODE)
+	wchar_t *output_name; // output file name (used on Windows, UNICODE)
+#else
 	char *input_name; // input file name
 	char *output_name; // output file name
+#endif
 	uint8_t verbose; // should telxcc be verbose?
 	uint16_t page; // teletext page containing cc we want to filter
 	uint16_t tid; // 13-bit packet ID for teletext stream
@@ -160,7 +179,21 @@ struct {
 	uint8_t se_mode;
 	//char *template; // output format template
 	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
-} config = { NULL, NULL, NO, 0, 0, 0, NO, NO, NO, 0, NO, /*NULL,*/ NO };
+} config = {
+	.input_name = NULL,
+	.output_name = NULL,
+	.verbose = NO,
+	.page = 0,
+	.tid = 0,
+	.offset = 0,
+	.colours = NO,
+	.bom = YES,
+	.nonempty = NO,
+	.utc_refvalue = 0,
+	.se_mode = NO,
+	//.template = NULL,
+	.m2ts = NO
+};
 
 /*
 formatting template:
@@ -217,7 +250,9 @@ struct {
 	uint8_t g0_m29;
 	uint8_t g0_x28;
 } primary_charset = {
-	0x00, UNDEF, UNDEF
+	.current = 0x00,
+	.g0_m29 = UNDEF,
+	.g0_x28 = UNDEF
 };
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
@@ -225,9 +260,9 @@ struct {
 	uint16_t character;
 	char *entity;
 } const ENTITIES[] = {
-	{ '<', "&lt;" },
-	{ '>', "&gt;" },
-	{ '&', "&amp;" }
+	{ .character = '<', .entity = "&lt;" },
+	{ .character = '>', .entity = "&gt;" },
+	{ .character = '&', .entity = "&amp;" }
 };
 
 // PMTs table
@@ -924,41 +959,23 @@ void signal_handler(int sig) {
 	}
 }
 
+// main
+int main(const int argc, char *argv[]) {
+		int ret = EXIT_FAILURE;
 
 #ifdef __MINGW32__
-int main(void)
-#else
-int main(const int argc, char *argv[])
-#endif
-{
-	int ret = EXIT_FAILURE;
-
-#ifdef __MINGW32__
-	// On Windows converts all command line parameters from wide characters to multibyte.
-	setlocale(LC_ALL, "");
-
-	int argc;
-	char **argv;
-
-	{
-		wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argc);
-		argv = (char **)calloc(argc, sizeof(char *));
-		for (int i = 0; i < argc; i++) {
-			size_t size = wcslen(argw[i]) + 1;
-			argv[i] = calloc(size, 1);
-			wcstombs(argv[i], argw[i], size); 
+		int argwc = 0;
+		wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argwc);
+		if ((argw == NULL) || (argwc != argc)) {
+			fprintf(stderr, "! Could not process Windows UNICODE command line parameters.\n\n");
+			goto fail;
 		}
-		LocalFree(argw);
-	}
 #endif
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
 	fprintf(stderr, "(c) Forers, s. r. o., <info@forers.com>, 2011-2014; Licensed under the GPL.\n");
-	fprintf(stderr, "Version %s (Built on %s)\n", TELXCC_VERSION, __DATE__);
+	fprintf(stderr, "Version %s (%s), Built on %s\n", TELXCC_VERSION, PLATFORM, __DATE__);
 	fprintf(stderr, "\n");
-
-	// by default output UTF-8 BOM to redirect STDOUT only, Windows does not like those chars in console
-	if (isatty(1) < 1) config.bom = YES;
 
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
@@ -985,10 +1002,18 @@ int main(const int argc, char *argv[])
 			goto fail;
 		}
 		else if ((strcmp(argv[i], "-i") == 0) && (argc > i + 1)) {
+#ifdef __MINGW32__
+			config.input_name = argw[++i];
+#else
 			config.input_name = argv[++i];
+#endif
 		}
 		else if ((strcmp(argv[i], "-o") == 0) && (argc > i + 1)) {
+#ifdef __MINGW32__
+			config.output_name = argw[++i];
+#else
 			config.output_name = argv[++i];
+#endif
 		}
 		else if ((strcmp(argv[i], "-p") == 0) && (argc > i + 1)) {
 			config.page = atoi(argv[++i]);
@@ -1047,11 +1072,12 @@ int main(const int argc, char *argv[])
 		GetWindowThreadProcessId(consoleWnd, &dwProcessId);
 
 		if (GetCurrentProcessId() == dwProcessId) {
-			INITCOMMONCONTROLSEX iccx;
-			iccx.dwSize = sizeof(iccx);
-			iccx.dwICC = ICC_STANDARD_CLASSES;
+			INITCOMMONCONTROLSEX iccx = {
+				.dwSize = sizeof(iccx),
+				.dwICC = ICC_STANDARD_CLASSES
+			};
 			InitCommonControlsEx(&iccx);
-			MessageBoxW(NULL, L"telxcc is a console application. Please run it from command line (cmd.exe), scheduler or another application.", L"telxcc", MB_OK | MB_ICONWARNING);
+			MessageBox(NULL, "telxcc is a console application. Please run it from command line (cmd.exe), scheduler or another application.", "telxcc", MB_OK | MB_ICONWARNING);
 			goto fail;
 		}
 	}
@@ -1087,6 +1113,16 @@ int main(const int argc, char *argv[])
 	signal(SIGINT, signal_handler);
 	signal(SIGTERM, signal_handler);
 
+#ifdef __MINGW32__
+	if ((config.input_name == NULL) || (wcscmp(config.input_name, L"-") == 0)) {
+		fin = stdin;
+	} else {
+		if ((fin = _wfopen(config.input_name, L"rb")) == NULL) {
+			fprintf(stderr, "! Could not open input file.\n\n");
+			goto fail;
+		}
+	}
+#else
 	if ((config.input_name == NULL) || (strcmp(config.input_name, "-") == 0)) {
 		fin = stdin;
 	} else {
@@ -1095,12 +1131,23 @@ int main(const int argc, char *argv[])
 			goto fail;
 		}
 	}
+#endif
 
 	if (isatty(fileno(fin))) {
-		fprintf(stderr, "! I guess you do not want to type binary TS packets with keyboard. STDIN must be redirected.\n\n");
+		fprintf(stderr, "! STDIN is a terminal. STDIN must be redirected.\n\n");
 		goto fail;
 	}
 
+#ifdef __MINGW32__
+	if ((config.output_name == NULL) || (wcscmp(config.output_name, L"-") == 0)) {
+		fout = stdout;
+	} else {
+		if ((fout = _wfopen(config.output_name, L"wb")) == NULL) {
+			fprintf(stderr, "! Could not open output file.\n\n");
+			goto fail;
+		}
+	}
+#else
 	if ((config.output_name == NULL) || (strcmp(config.output_name, "-") == 0)) {
 		fout = stdout;
 	} else {
@@ -1109,21 +1156,30 @@ int main(const int argc, char *argv[])
 			goto fail;
 		}
 	}
-
-	// full buffering -- disables flushing after CR/FL, we will flush manually whole SRT frames
-	setvbuf(fout, (char*)NULL, _IOFBF, 0);
+#endif
 
 #ifdef __MINGW32__
 	if (isatty(fileno(fout))) {
-		fprintf(stderr, "! UTF-8 encoded closed captions printed directly into STDOUT could be corrupted on Windows platform\n");
+		fprintf(stderr, "! On Windows platform produced closed captions do not have the same encoding as the command line terminal (UTF-8 vs UNICODE/UTF-16). Hence CC could not be printed directly to the terminal.\n\n");
+		goto fail;
 	}
 #endif
 
+	if (isatty(fileno(fout))) {
+		fprintf(stderr, "- STDOUT is a terminal, omitting UTF-8 BOM sequence on the output.\n");
+		config.bom = NO;
+	}
+
+	// full buffering -- disables flushing after CR/FL, we will flush manually whole SRT frames
+	setvbuf(fout, (char*)NULL, _IOFBF, 0);
+	
 	// print UTF-8 BOM chars
 	if (config.bom == YES) {
 		fprintf(fout, "\xef\xbb\xbf");
 		fflush(fout);
 	}
+
+	// PROCESING
 
 	// FYI, packet counter
 	uint32_t packet_counter = 0;
@@ -1319,9 +1375,11 @@ fail:
 	}
 
 #ifdef __MINGW32__
-	// On Windows free argv -- it was allocated dynamically
-	for (int i = 0; i < argc; i++) free(argv[i]);
-	free(argv);
+	if (argw != NULL) {
+		LocalFree(argw);
+		argw = NULL;
+		argwc = 0;
+	}
 #endif
 
 	return ret;
