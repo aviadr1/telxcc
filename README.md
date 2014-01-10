@@ -75,6 +75,13 @@ Important: telxcc will *never ever* be like Emacs; it is simple and specialized 
 * [Hybrid](http://www.selur.de) by Georg Pelz
 
 
+## Binaries
+
+* [telxcc v2.5.3 - Windows, x86](https://forers.com/download/telxcc/telxcc-windows-x86-v2.5.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-windows-x86-v2.5.3.zip.asc))
+* [telxcc v2.5.3 - Mac OS X, x86_64 Lion](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.5.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-macosx-x86_64-v2.5.3.zip.asc))
+* [telxcc v2.5.3 - Linux, x86_64 static](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.5.3.zip) ([GPG signature](https://forers.com/download/telxcc/telxcc-linux-x86_64-v2.5.3.zip.asc))
+
+
 ## Build
 
 To install, or uninstall telxcc on Linux and Mac:
