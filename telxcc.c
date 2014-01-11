@@ -974,6 +974,12 @@ void signal_handler(int sig) {
 int main(const int argc, char *argv[]) {
 		int ret = EXIT_FAILURE;
 
+		if ((argc > 1) && (strcmp(argv[1], "-V") == 0)) {
+			fprintf(stderr, "%s\n", TELXCC_VERSION);
+			ret = EXIT_SUCCESS;
+			goto fail;
+		}
+
 #ifdef __MINGW32__
 		int argwc = 0;
 		wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argwc);
@@ -991,7 +997,8 @@ int main(const int argc, char *argv[]) {
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
-			fprintf(stderr, "Usage: %s [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", argv[0]);
+			fprintf(stderr, "  -V          print out version and quit\n");
 			fprintf(stderr, "  -i INPUT    transport stream (- = STDIN, default STDIN)\n");
 			fprintf(stderr, "  -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)\n");
 			fprintf(stderr, "  -h          this help text\n");

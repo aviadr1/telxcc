@@ -117,10 +117,11 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc -h ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Version 2.5.1 (Built on Oct 12 2013)
+    (c) Forers, s. r. o., <info@forers.com>, 2011-2014; Licensed under the GPL.
+    Version 2.5.3 (Apple), Built on Jan 11 2014
     
-    Usage: telxcc [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
+    Usage: ./telxcc -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]
+      -V          print out version and quit
       -i INPUT    transport stream (- = STDIN, default STDIN)
       -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)
       -h          this help text
@@ -136,7 +137,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
                   if REF (unix timestamp) is omitted, use current system time,
                   telxcc will automatically switch to transport stream UTC timestamps when available
       -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)
-
+    
 
     $ man ./telxcc.1 ↵
 
@@ -145,8 +146,8 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
 
     $ ./telxcc < TVP.ts > TVP.srt ↵
     telxcc - TELeteXt Closed Captions decoder
-    (c) Forers, s. r. o., <info@forers.com>, 2011-2013; Licensed under the GPL.
-    Version 2.5.1 (Built on Oct 12 2013)
+    (c) Forers, s. r. o., <info@forers.com>, 2011-2014; Licensed under the GPL.
+    Version 2.5.3 (Apple), Built on Jan 11 2014
     
     - Found VBI/teletext stream ID 205 (0xcd) for SID 45 (0x2d)
     - PID 0xbd PTS available
