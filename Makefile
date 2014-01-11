@@ -1,5 +1,5 @@
 CC = gcc
-CCFLAGS = -m64 -march=core2 -Wall -std=gnu99 -O3 -pedantic
+CCFLAGS = -m64 -march=core2 -std=gnu99 -O3 -Wall -pedantic
 LD = ld
 LDFLAGS =
 DEST = /usr/local

@@ -35,6 +35,7 @@ Werner Brückner -- Teletext in digital television
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
+#include <libgen.h>
 #include "hamming.h"
 #include "teletext.h"
 
@@ -997,7 +998,7 @@ int main(const int argc, char *argv[]) {
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
-			fprintf(stderr, "Usage: %s -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", argv[0]);
+			fprintf(stderr, "Usage: %s -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", basename(argv[0]));
 			fprintf(stderr, "  -V          print out version and quit\n");
 			fprintf(stderr, "  -i INPUT    transport stream (- = STDIN, default STDIN)\n");
 			fprintf(stderr, "  -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)\n");
@@ -1393,11 +1394,14 @@ fail:
 	}
 
 #ifdef __MINGW32__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 	if (argw != NULL) {
 		LocalFree(argw);
 		argw = NULL;
 		argwc = 0;
 	}
+#pragma GCC diagnostic pop
 #endif
 
 	return ret;
