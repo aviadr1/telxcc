@@ -362,7 +362,7 @@ void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
 	sprintf(buffer, "%02"PRIu8":%02"PRIu8":%02"PRIu8",%03"PRIu16, h, m, s, u);
 }
 
-// wide char (16 bits) to utf-8 conversion
+// UCS-2 (16 bits) to UTF-8 (Unicode Normalization Form C (NFC)) conversion
 void ucs2_to_utf8(char *r, uint16_t ch) {
 	if (ch < 0x80) {
 		r[0] = ch & 0x7f;
@@ -1001,7 +1001,7 @@ int main(const int argc, char *argv[]) {
 			fprintf(stderr, "Usage: %s -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", basename(argv[0]));
 			fprintf(stderr, "  -V          print out version and quit\n");
 			fprintf(stderr, "  -i INPUT    transport stream (- = STDIN, default STDIN)\n");
-			fprintf(stderr, "  -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded) (- = STDOUT, default STDOUT)\n");
+			fprintf(stderr, "  -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded, NFC) (- = STDOUT, default STDOUT)\n");
 			fprintf(stderr, "  -h          this help text\n");
 			fprintf(stderr, "  -v          be verbose\n");
 			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions\n");
@@ -1179,7 +1179,7 @@ int main(const int argc, char *argv[]) {
 
 #ifdef __MINGW32__
 	if (isatty(fileno(fout))) {
-		fprintf(stderr, "! On Windows platform produced closed captions do not have the same encoding as the command line terminal (UTF-8 vs UNICODE/UTF-16). Hence CC could not be printed directly to the terminal.\n\n");
+		fprintf(stderr, "! On Windows platform produced closed captions do not have the same encoding as the command line terminal (UTF-8 vs UCS-2). Hence CC could not be printed directly to the terminal.\n\n");
 		goto fail;
 	}
 #endif
