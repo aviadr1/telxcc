@@ -133,7 +133,7 @@ telxcc has no lib dependencies and is easy to build and run on Linux, Mac and Wi
       -n          do not print UTF-8 BOM characters to the file
       -1          produce at least one (dummy) frame
       -c          output colour information in font HTML tags
-      -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
+      -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line
                   if REF (unix timestamp) is omitted, use current system time,
                   telxcc will automatically switch to transport stream UTC timestamps when available
       -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)

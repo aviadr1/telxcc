@@ -973,21 +973,21 @@ void signal_handler(int sig) {
 
 // main
 int main(const int argc, char *argv[]) {
-		int ret = EXIT_FAILURE;
-
-		if ((argc > 1) && (strcmp(argv[1], "-V") == 0)) {
-			fprintf(stderr, "%s\n", TELXCC_VERSION);
-			ret = EXIT_SUCCESS;
-			goto fail;
-		}
+	int ret = EXIT_FAILURE;
+	
+	if ((argc > 1) && (strcmp(argv[1], "-V") == 0)) {
+		fprintf(stderr, "%s\n", TELXCC_VERSION);
+		ret = EXIT_SUCCESS;
+		goto fail;
+	}
 
 #ifdef __MINGW32__
-		int argwc = 0;
-		wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argwc);
-		if ((argw == NULL) || (argwc != argc)) {
-			fprintf(stderr, "! Could not process Windows UNICODE command line parameters.\n\n");
-			goto fail;
-		}
+	int argwc = 0;
+	wchar_t **argw = CommandLineToArgvW(GetCommandLineW(), &argwc);
+	if ((argw == NULL) || (argwc != argc)) {
+		fprintf(stderr, "! Could not process Windows UNICODE command line parameters.\n\n");
+		goto fail;
+	}
 #endif
 
 	fprintf(stderr, "telxcc - TELeteXt Closed Captions decoder\n");
@@ -1012,7 +1012,7 @@ int main(const int argc, char *argv[]) {
 			fprintf(stderr, "  -1          produce at least one (dummy) frame\n");
 			fprintf(stderr, "  -c          output colour information in font HTML tags\n");
 			//fprintf(stderr, "  -F FORMAT   //FIXME\n");
-			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
+			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
 			fprintf(stderr, "              if REF (unix timestamp) is omitted, use current system time,\n");
 			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
 			fprintf(stderr, "  -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)\n");
