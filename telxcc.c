@@ -35,7 +35,6 @@ Werner Brückner -- Teletext in digital television
 #include <time.h>
 #include <unistd.h>
 #include <inttypes.h>
-#include <libgen.h>
 #include "hamming.h"
 #include "teletext.h"
 
@@ -971,6 +970,12 @@ void signal_handler(int sig) {
 	}
 }
 
+char* basename(const char *s) {
+	char *r = (char *)s;
+	while (*s) if (*s++ == '/') r = (char *)s;
+	return r;
+}
+
 // main
 int main(const int argc, char *argv[]) {
 	int ret = EXIT_FAILURE;
@@ -998,12 +1003,16 @@ int main(const int argc, char *argv[]) {
 	// command line params parsing
 	for (uint8_t i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "-h") == 0) {
-			fprintf(stderr, "Usage: %s -V | [-i INPUT] [-o OUTPUT] [-h] [-v] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", basename(argv[0]));
+			fprintf(stderr, "Usage: %s -h\n", basename(argv[0]));
+			fprintf(stderr, "  or   %s -V\n", basename(argv[0]));
+			fprintf(stderr, "  or   %s [-v] [-m] [-i INPUT] [-o OUTPUT] [-p PAGE] [-t TID] [-f OFFSET] [-n] [-1] [-c] [-s [REF]]\n", basename(argv[0]));
+			fprintf(stderr, "\n");
+			fprintf(stderr, "  -h          this help text\n");
 			fprintf(stderr, "  -V          print out version and quit\n");
+			fprintf(stderr, "  -v          be verbose\n");
+			fprintf(stderr, "  -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)\n");
 			fprintf(stderr, "  -i INPUT    transport stream (- = STDIN, default STDIN)\n");
 			fprintf(stderr, "  -o OUTPUT   subtitles in SubRip SRT file format (UTF-8 encoded, NFC) (- = STDOUT, default STDOUT)\n");
-			fprintf(stderr, "  -h          this help text\n");
-			fprintf(stderr, "  -v          be verbose\n");
 			fprintf(stderr, "  -p PAGE     teletext page number carrying closed captions\n");
 			fprintf(stderr, "  -t TID      transport stream PID of teletext data sub-stream\n");
 			fprintf(stderr, "              if the value of 8192 is specified, the first suitable stream will be used\n");
@@ -1015,7 +1024,6 @@ int main(const int argc, char *argv[]) {
 			fprintf(stderr, "  -s [REF]    search engine mode; produce absolute timestamps in UTC and output data in one line\n");
 			fprintf(stderr, "              if REF (unix timestamp) is omitted, use current system time,\n");
 			fprintf(stderr, "              telxcc will automatically switch to transport stream UTC timestamps when available\n");
-			fprintf(stderr, "  -m          input file format is BDAV MPEG-2 Transport Stream (BluRay and some IP-TV recorders)\n");
 			fprintf(stderr, "\n");
 			ret = EXIT_SUCCESS;
 			goto fail;
