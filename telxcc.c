@@ -147,7 +147,7 @@ typedef struct {
 } frame_t;
 
 // application config global variable
-struct {
+typedef struct {
 #ifdef __MINGW32__
 	wchar_t *input_name; // input file name (used on Windows, UNICODE)
 	wchar_t *output_name; // output file name (used on Windows, UNICODE)
@@ -167,7 +167,9 @@ struct {
 	uint8_t se_mode;
 	//char *template; // output format template
 	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
-} config = {
+} telxcc_config_t;
+
+telxcc_config_t config = {
 	.input_name = NULL,
 	.output_name = NULL,
 	.verbose = NO,
