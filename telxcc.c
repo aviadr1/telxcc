@@ -169,6 +169,25 @@ typedef struct {
 	uint8_t m2ts; // consider input stream is af s M2TS, instead of TS
 } telxcc_config_t;
 
+// application states -- flags for notices that should be printed only once
+typedef struct {
+    uint8_t programme_info_processed;
+    uint8_t pts_initialized;
+} telxcc_states_t;
+
+// current charset (charset can be -- and always is -- changed during transmission)
+typedef struct {
+    uint8_t current;
+    uint8_t g0_m29;
+    uint8_t g0_x28;
+} telxcc_charset_t;
+
+// entities, used in colour mode, to replace unsafe HTML tag chars
+typedef struct {
+    uint16_t character;
+    char *entity;
+} telxcc_entity_t;
+
 telxcc_config_t config = {
 	.input_name = NULL,
 	.output_name = NULL,
@@ -207,12 +226,6 @@ FILE *fout = NULL;
 // macro -- output only when increased verbosity was turned on
 #define VERBOSE_ONLY if (config.verbose == YES)
 
-// application states -- flags for notices that should be printed only once
-typedef struct {
-	uint8_t programme_info_processed;
-	uint8_t pts_initialized;
-} telxcc_states_t;
-
 telxcc_states_t states = {
 	.programme_info_processed = NO,
 	.pts_initialized = NO
@@ -239,24 +252,11 @@ transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 // flag indicating if incoming data should be processed or ignored
 uint8_t receiving_data = NO;
 
-// current charset (charset can be -- and always is -- changed during transmission)
-typedef struct {
-	uint8_t current;
-	uint8_t g0_m29;
-	uint8_t g0_x28;
-} telxcc_charset_t;
-
 telxcc_charset_t primary_charset = {
 	.current = 0x00,
 	.g0_m29 = UNDEF,
 	.g0_x28 = UNDEF
 };
-
-// entities, used in colour mode, to replace unsafe HTML tag chars
-typedef struct {
-	uint16_t character;
-	char *entity;
-} telxcc_entity_t;
 
 const telxcc_entity_t ENTITIES[] = {
 	{ .character = '<', .entity = "&lt;" },
