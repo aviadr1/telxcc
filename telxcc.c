@@ -206,10 +206,12 @@ FILE *fout = NULL;
 #define VERBOSE_ONLY if (config.verbose == YES)
 
 // application states -- flags for notices that should be printed only once
-struct {
+typedef struct {
 	uint8_t programme_info_processed;
 	uint8_t pts_initialized;
-} states = {
+} telxcc_states_t;
+
+telxcc_states_t states = {
 	.programme_info_processed = NO,
 	.pts_initialized = NO
 };
@@ -236,21 +238,25 @@ transmission_mode_t transmission_mode = TRANSMISSION_MODE_SERIAL;
 uint8_t receiving_data = NO;
 
 // current charset (charset can be -- and always is -- changed during transmission)
-struct {
+typedef struct {
 	uint8_t current;
 	uint8_t g0_m29;
 	uint8_t g0_x28;
-} primary_charset = {
+} telxcc_charset_t;
+
+telxcc_charset_t primary_charset = {
 	.current = 0x00,
 	.g0_m29 = UNDEF,
 	.g0_x28 = UNDEF
 };
 
 // entities, used in colour mode, to replace unsafe HTML tag chars
-struct {
+typedef struct {
 	uint16_t character;
 	char *entity;
-} const ENTITIES[] = {
+} telxcc_entity_t;
+
+const telxcc_entity_t ENTITIES[] = {
 	{ .character = '<', .entity = "&lt;" },
 	{ .character = '>', .entity = "&gt;" },
 	{ .character = '&', .entity = "&amp;" }
