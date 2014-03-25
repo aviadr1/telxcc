@@ -78,7 +78,7 @@ static const telxcc_entity_t ENTITIES[] = {
     { .character = '&', .entity = "&amp;" }
 };
 
-static void telxcc_init_context(telxcc_context_t* ctx)
+void telxcc_init_context(telxcc_context_t* ctx)
 {
     ctx->config.input_name = NULL;
     ctx->config.output_name = NULL;
