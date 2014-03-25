@@ -180,7 +180,7 @@ static inline bool_t in_array(uint16_t *array, uint16_t length, uint16_t element
 #define PAGE(p) (p & 0xff)
 
 // ETS 300 706, chapter 8.2
-uint8_t unham_8_4(telxcc_context_t* ctx, uint8_t a) {
+static uint8_t unham_8_4(telxcc_context_t* ctx, uint8_t a) {
 	uint8_t r = UNHAM_8_4[a];
 	if (r == 0xff) {
 		r = 0;
@@ -190,7 +190,7 @@ uint8_t unham_8_4(telxcc_context_t* ctx, uint8_t a) {
 }
 
 // ETS 300 706, chapter 8.3
-uint32_t unham_24_18(uint32_t a) {
+static uint32_t unham_24_18(uint32_t a) {
 	uint8_t test = 0;
 
 	// Tests A-F correspond to bits 0-6 respectively in 'test'.
@@ -211,7 +211,7 @@ uint32_t unham_24_18(uint32_t a) {
 	return (a & 0x000004) >> 2 | (a & 0x000070) >> 3 | (a & 0x007f00) >> 4 | (a & 0x7f0000) >> 5;
 }
 
-void remap_g0_charset(telxcc_context_t* ctx, uint8_t c) {
+static void remap_g0_charset(telxcc_context_t* ctx, uint8_t c) {
 	if (c != ctx->primary_charset.current) {
 		uint8_t m = G0_LATIN_NATIONAL_SUBSETS_MAP[c];
 		if (m == 0xff) {
@@ -225,7 +225,7 @@ void remap_g0_charset(telxcc_context_t* ctx, uint8_t c) {
 	}
 }
 
-void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
+static void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
 	uint64_t p = timestamp;
 	uint8_t h = p / 3600000;
 	uint8_t m = p / 60000 - 60 * h;
@@ -235,7 +235,7 @@ void timestamp_to_srttime(uint64_t timestamp, char *buffer) {
 }
 
 // UCS-2 (16 bits) to UTF-8 (Unicode Normalization Form C (NFC)) conversion
-void ucs2_to_utf8(char *r, uint16_t ch) {
+static void ucs2_to_utf8(char *r, uint16_t ch) {
 	if (ch < 0x80) {
 		r[0] = ch & 0x7f;
 		r[1] = 0;
@@ -257,7 +257,7 @@ void ucs2_to_utf8(char *r, uint16_t ch) {
 }
 
 // check parity and translate any reasonable teletext character into ucs2
-uint16_t telx_to_ucs2(telxcc_context_t* ctx, uint8_t c) {
+static uint16_t telx_to_ucs2(telxcc_context_t* ctx, uint8_t c) {
 	if (PARITY_8[c] == 0) {
 		VERBOSE_ONLY fprintf(stderr, "! Unrecoverable data error; PARITY(%02x)\n", c);
 		return 0x20;
@@ -269,7 +269,7 @@ uint16_t telx_to_ucs2(telxcc_context_t* ctx, uint8_t c) {
 }
 
 // FIXME: implement output modules (to support different formats, printf formatting etc)
-void process_page(telxcc_context_t* ctx, teletext_page_t *page) {
+static void process_page(telxcc_context_t* ctx, teletext_page_t *page) {
 #ifdef DEBUG
 	for (uint8_t row = 1; row < 25; row++) {
 		fprintf(fout, "# DEBUG[%02u]: ", row);
@@ -413,7 +413,7 @@ void process_page(telxcc_context_t* ctx, teletext_page_t *page) {
 	fflush(ctx->fout);
 }
 
-void process_telx_packet(telxcc_context_t* ctx, data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp) {
+static void process_telx_packet(telxcc_context_t* ctx, data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp) {
 	// variable names conform to ETS 300 706, chapter 7.1.2
 	uint8_t address = (unham_8_4(ctx, packet->address[1]) << 4) | unham_8_4(ctx, packet->address[0]);
 	uint8_t m = address & 0x7;
@@ -748,7 +748,7 @@ void telxcc_process_pes_packet(telxcc_context_t* ctx, uint8_t *buffer, uint16_t 
 	}
 }
 
-void analyze_pat(telxcc_context_t* ctx, uint8_t *buffer, uint8_t size) {
+static void analyze_pat(telxcc_context_t* ctx, uint8_t *buffer, uint8_t size) {
 	if (size < 7) return;
 
 	pat_t pat = { 0 };
@@ -787,7 +787,7 @@ if (pat.pointer_field > 0) {
 	}
 }
 
-void analyze_pmt(telxcc_context_t* ctx, uint8_t *buffer, uint8_t size) {
+static void analyze_pmt(telxcc_context_t* ctx, uint8_t *buffer, uint8_t size) {
 	if (size < 7) return;
 
 	pmt_t pmt = { 0 };
@@ -836,14 +836,14 @@ if (pmt.pointer_field > 0) {
 // graceful exit support
 uint8_t exit_request = NO;
 
-void signal_handler(int sig) {
+static void signal_handler(int sig) {
 	if ((sig == SIGINT) || (sig == SIGTERM)) {
 		fprintf(stderr, "- SIGINT/SIGTERM received, preparing graceful exit\n");
 		exit_request = YES;
 	}
 }
 
-char* basename(const char *s) {
+static char* basename(const char *s) {
 	char *r = (char *)s;
 	while (*s) if (*s++ == '/') r = (char *)s;
 	return r;
@@ -1218,7 +1218,7 @@ int telxcc_main(const int argc, char *argv[]) {
 			if ((header.payload_unit_start == 0) && (payload_counter == 0)) continue;
 
 			// proceed with payload buffer
-			if ((header.payload_unit_start > 0) && (payload_counter > 0)) process_pes_packet(ctx, payload_buffer, payload_counter);
+			if ((header.payload_unit_start > 0) && (payload_counter > 0)) telxcc_process_pes_packet(ctx, payload_buffer, payload_counter);
 
 			// new payload frame start
 			if (header.payload_unit_start > 0) payload_counter = 0;
