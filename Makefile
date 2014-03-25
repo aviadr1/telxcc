@@ -4,7 +4,7 @@ LD = ld
 LDFLAGS =
 DEST = /usr/local
 
-OBJS = telxcc.o
+OBJS = libtelxcc.o telxcc.o
 EXEC = telxcc
 
 all : $(EXEC)

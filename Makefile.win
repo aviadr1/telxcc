@@ -2,7 +2,7 @@ CC = gcc
 CCFLAGS = -std=gnu99 -O3 -Wall -pedantic
 LDFLAGS = -lcomctl32
 
-OBJS = telxcc.o telxcc.res
+OBJS = libtelxcc.o telxcc.o telxcc.res
 EXEC = telxcc.exe
 
 all : $(EXEC)

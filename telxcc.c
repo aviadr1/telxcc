@@ -67,6 +67,11 @@ int _CRT_fmode = _O_BINARY;
 #include <wchar.h>
 #endif
 
+const char* TTXT_COLOURS[8] = {
+    //black,     red,       green,     yellow,    blue,      magenta,   cyan,      white
+    "#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
+};
+
 static const telxcc_entity_t ENTITIES[] = {
     { .character = '<', .entity = "&lt;" },
     { .character = '>', .entity = "&gt;" },
@@ -845,7 +850,7 @@ char* basename(const char *s) {
 }
 
 // main
-int main(const int argc, char *argv[]) {
+int telxcc_main(const int argc, char *argv[]) {
 	int ret = EXIT_FAILURE;
     telxcc_context_t ctx_holder;
     telxcc_context_t* ctx = &ctx_holder;

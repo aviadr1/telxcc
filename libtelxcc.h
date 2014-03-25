@@ -2,6 +2,7 @@
 #define LIBTELXCC_H
 
 #include <inttypes.h>
+#include <stdio.h>
 
 #define TS_PMT_MAP_SIZE 128
 #define TS_PMT_TTXT_MAP_SIZE 128
@@ -84,11 +85,6 @@ typedef enum {
     TRANSMISSION_MODE_PARALLEL = 0,
     TRANSMISSION_MODE_SERIAL = 1
 } transmission_mode_t;
-
-const char* TTXT_COLOURS[8] = {
-    //black,     red,       green,     yellow,    blue,      magenta,   cyan,      white
-    "#000000", "#ff0000", "#00ff00", "#ffff00", "#0000ff", "#ff00ff", "#00ffff", "#ffffff"
-};
 
 typedef struct {
     uint64_t show_timestamp; // show at timestamp (in ms)
@@ -187,5 +183,6 @@ typedef struct {
 } telxcc_context_t;
 
 extern void process_telx_packet(telxcc_context_t* ctx, data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp);
+extern int telxcc_main(const int argc, char *argv[]);
 
 #endif
