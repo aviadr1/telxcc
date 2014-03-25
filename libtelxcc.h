@@ -182,7 +182,7 @@ typedef struct {
 
 } telxcc_context_t;
 
-extern void process_telx_packet(telxcc_context_t* ctx, data_unit_t data_unit_id, teletext_packet_payload_t *packet, uint64_t timestamp);
+extern void telxcc_process_pes_packet(telxcc_context_t* ctx, uint8_t *buffer, uint16_t size);
 extern int telxcc_main(const int argc, char *argv[]);
 
 #endif

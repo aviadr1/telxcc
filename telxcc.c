@@ -648,7 +648,7 @@ void process_telx_packet(telxcc_context_t* ctx, data_unit_t data_unit_id, telete
 	}
 }
 
-void process_pes_packet(telxcc_context_t* ctx, uint8_t *buffer, uint16_t size) {
+void telxcc_process_pes_packet(telxcc_context_t* ctx, uint8_t *buffer, uint16_t size) {
 	if (size < 6) return;
 
 	// Packetized Elementary Stream (PES) 32-bit start code
